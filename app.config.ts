@@ -66,7 +66,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ['expo-image-picker', { photosPermission: 'Allow DieselUp to upload verification and delivery documents.' }]
   ],
   extra: {
-    eas: { projectId: process.env.EXPO_PUBLIC_EAS_PROJECT_ID },
+    eas: { projectId: process.env.EXPO_PUBLIC_EAS_PROJECT_ID ?? 'c9efd986-48cd-4a91-8794-737edf4773b0' },
     supportEmail: process.env.EXPO_PUBLIC_SUPPORT_EMAIL ?? 'support@dieselup.ng'
   }
 });
