@@ -25,14 +25,25 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [authLoading, setAuthLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
 
-  useEffect(() => onIdTokenChanged(auth, (user) => { setFirebaseUser(user); setAuthLoading(false); }), []);
+  useEffect(() => {
+    const unsub = onIdTokenChanged(auth, (user) => { setFirebaseUser(user); setAuthLoading(false); });
+    const timer = setTimeout(() => setAuthLoading(false), 8000);
+    return () => { unsub(); clearTimeout(timer); };
+  }, []);
   useEffect(() => {
     if (!firebaseUser) { setProfile(null); setProfileLoading(false); return; }
     setProfileLoading(true);
-    return onSnapshot(doc(db, 'users', firebaseUser.uid), (snapshot) => {
+    const timer = setTimeout(() => setProfileLoading(false), 8000);
+    const unsub = onSnapshot(doc(db, 'users', firebaseUser.uid), (snapshot) => {
+      clearTimeout(timer);
       setProfile(snapshot.exists() ? ({ id: snapshot.id, ...snapshot.data() } as AppUser) : null);
       setProfileLoading(false);
-    }, () => setProfileLoading(false));
+    }, (err) => {
+      clearTimeout(timer);
+      console.error('Profile fetch error:', err);
+      setProfileLoading(false);
+    });
+    return () => { unsub(); clearTimeout(timer); };
   }, [firebaseUser]);
 
   const ensureProfile = useCallback(async (user: User, role: Registration['role'] = 'customer', name?: string) => {

@@ -7,14 +7,14 @@ const schema = z.object({
 });
 
 const values = {
-  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
-  measurementId: process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID,
-  googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY?.trim(),
+  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN?.trim(),
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID?.trim(),
+  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET?.trim(),
+  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID?.trim(),
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID?.trim(),
+  measurementId: process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID?.trim(),
+  googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY?.trim()
 };
 
 const parsed = schema.safeParse(values);
