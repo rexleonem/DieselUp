@@ -15,6 +15,7 @@ interface AuthContextValue {
   firebaseUser: User | null; profile: AppUser | null; loading: boolean; profileMissing: boolean;
   signInEmail: (email: string, password: string) => Promise<void>; register: (value: Registration) => Promise<void>;
   signInGoogle: () => Promise<void>; signOut: () => Promise<void>; resetPassword: (email: string) => Promise<void>;
+  refreshProfile: () => Promise<AppUser | null>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -46,9 +47,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
     return () => { unsub(); clearTimeout(timer); };
   }, [firebaseUser]);
 
-  const ensureProfile = useCallback(async (user: User, role: Registration['role'] = 'customer', name?: string) => {
+  const refreshProfile = useCallback(async () => {
+    const user = auth.currentUser;
+    if (!user) { setProfile(null); return null; }
+    const snapshot = await getDoc(doc(db, 'users', user.uid));
+    const next = snapshot.exists() ? ({ id: snapshot.id, ...snapshot.data() } as AppUser) : null;
+    setProfile(next); setProfileLoading(false); return next;
+  }, []);
+
+  const ensureProfile = useCallback(async (user: User, role: Registration['role'] = 'customer', name?: string, phoneNumber?: string) => {
     if ((await getDoc(doc(db, 'users', user.uid))).exists()) return;
-    await upsertAccountProfile({ displayName: name ?? user.displayName ?? user.email?.split('@')[0] ?? 'DieselUp User', role, phoneNumber: user.phoneNumber ?? undefined });
+    await upsertAccountProfile({ displayName: name ?? user.displayName ?? user.email?.split('@')[0] ?? 'DieselUp User', role, phoneNumber: user.phoneNumber ?? phoneNumber });
   }, []);
 
   const value = useMemo<AuthContextValue>(() => ({
@@ -57,9 +66,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
     register: async ({ name, email, password, phoneNumber, role }) => {
       const result = await createUserWithEmailAndPassword(auth, email.trim(), password);
       await updateProfile(result.user, { displayName: name.trim() });
-      await ensureProfile(result.user, role, name.trim());
-      if (phoneNumber) await upsertAccountProfile({ displayName: name.trim(), role, phoneNumber });
+      await ensureProfile(result.user, role, name.trim(), phoneNumber);
       await result.user.getIdToken(true);
+      await refreshProfile();
     },
     signInGoogle: async () => {
       if (Platform.OS === 'web') {
@@ -70,8 +79,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
       }
       throw new Error('Google native sign-in requires the platform OAuth client IDs in the release build. Use email sign-in until those credentials are configured.');
     },
-    signOut: () => firebaseSignOut(auth), resetPassword: (email) => sendPasswordResetEmail(auth, email.trim())
-  }), [authLoading, ensureProfile, firebaseUser, profile, profileLoading]);
+    signOut: () => firebaseSignOut(auth), resetPassword: (email) => sendPasswordResetEmail(auth, email.trim()), refreshProfile
+  }), [authLoading, ensureProfile, firebaseUser, profile, profileLoading, refreshProfile]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

@@ -14,6 +14,7 @@
     "test": "vitest run",
     "test:rules": "firebase emulators:exec --only firestore --project dieselup-test \"vitest run --config vitest.rules.config.ts\"",
     "test:watch": "vitest",
+    "seed:demo-users": "node scripts/seed-demo-users.mjs",
     "firebase:emulators": "firebase emulators:start",
     "firebase:deploy": "firebase deploy",
     "functions:build": "npm --prefix functions run build"

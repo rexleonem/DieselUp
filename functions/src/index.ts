@@ -44,17 +44,24 @@ const haversineKm = (a: z.infer<typeof locationSchema>, b: z.infer<typeof locati
 const money = (value: number) => Math.round(value * 100) / 100;
 const hashCode = (value: string, salt: string) => scryptSync(value, salt, 32).toString('hex');
 
-export const upsertAccountProfile = onCall(callOptions, async (request) => {
+export const upsertAccountProfile = onCall({ enforceAppCheck: false }, async (request) => {
   const { uid } = requireUser(request); await rateLimit(uid, 'profile', 10, 3600);
   const input = z.object({ displayName: z.string().trim().min(2).max(100), role: z.enum(['customer', 'supplier', 'driver']).default('customer'), phoneNumber: z.string().max(30).optional() }).parse(request.data);
   const user = await getAuth().getUser(uid); const userRef = db.doc(`users/${uid}`); const existing = await userRef.get();
   if (existing.exists && existing.data()?.role && existing.data()?.role !== input.role) throw new HttpsError('failed-precondition', 'Account role cannot be changed here.');
   const status = input.role === 'customer' ? 'active' : 'pending';
-  await userRef.set({ email: user.email ?? null, phoneNumber: user.phoneNumber ?? input.phoneNumber ?? null, displayName: input.displayName, photoURL: user.photoURL ?? null, role: input.role, status, createdAt: existing.data()?.createdAt ?? FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+  let supplierId = existing.data()?.supplierId as string | undefined;
+  if (input.role === 'supplier' && !supplierId) {
+    const supplierRef = db.collection('suppliers').doc(); supplierId = supplierRef.id;
+    await supplierRef.set({ ownerId: uid, businessName: input.displayName, approvalStatus: 'pending', rating: 0, ratingCount: 0, availableLitres: 0, isOpen: false, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+  }
+  await userRef.set({ email: user.email ?? null, phoneNumber: user.phoneNumber ?? input.phoneNumber ?? null, displayName: input.displayName, photoURL: user.photoURL ?? null, role: input.role, status, ...(supplierId ? { supplierId } : {}), createdAt: existing.data()?.createdAt ?? FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
   if (input.role === 'customer') await db.doc(`customers/${uid}`).set({ userId: uid, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-  if (input.role === 'supplier') { const supplierRef = db.collection('suppliers').doc(); await supplierRef.set({ ownerId: uid, businessName: input.displayName, approvalStatus: 'pending', rating: 0, ratingCount: 0, availableLitres: 0, isOpen: false, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }); await userRef.update({ supplierId: supplierRef.id }); }
-  if (input.role === 'driver') await db.doc(`drivers/${uid}`).set({ userId: uid, displayName: input.displayName, email: user.email ?? null, phoneNumber: user.phoneNumber ?? input.phoneNumber ?? null, status: 'pending', online: false, completedDeliveries: 0, rating: 0, createdAt: FieldValue.serverTimestamp() });
-  await getAuth().setCustomUserClaims(uid, { role: input.role, status });
+  if (input.role === 'driver') {
+    const driverRef = db.doc(`drivers/${uid}`); const driver = await driverRef.get();
+    await driverRef.set({ userId: uid, displayName: input.displayName, email: user.email ?? null, phoneNumber: user.phoneNumber ?? input.phoneNumber ?? null, status: driver.data()?.status ?? 'pending', online: driver.data()?.online ?? false, completedDeliveries: driver.data()?.completedDeliveries ?? 0, rating: driver.data()?.rating ?? 0, createdAt: driver.data()?.createdAt ?? FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+  }
+  await getAuth().setCustomUserClaims(uid, { ...(user.customClaims ?? {}), role: input.role, status, supplierId: supplierId ?? null });
   return { ok: true };
 });
 
