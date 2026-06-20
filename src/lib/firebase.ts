@@ -20,7 +20,7 @@ else {
   catch { authInstance = getAuth(firebaseApp); }
 }
 export const auth = authInstance;
-export const db = initializeFirestore(firebaseApp, Platform.OS === 'web' ? { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) } : {});
+export const db = initializeFirestore(firebaseApp, {});
 export const storage = getStorage(firebaseApp);
 export const functions = getFunctions(firebaseApp, 'us-central1');
 
