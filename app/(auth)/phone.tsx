@@ -1,1 +1,2 @@
-export { PhoneAuthScreen as default } from '@/features/auth/PhoneAuthScreen';
+import { PhoneAuthScreen } from '@/features/auth/PhoneAuthScreen';
+export default PhoneAuthScreen;

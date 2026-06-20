@@ -3,16 +3,16 @@ service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
     function uid() { return request.auth.uid; }
-    function role() { return request.auth.token.role; }
+    function role() { return request.auth.token.get('role', ''); }
     function isAdmin() { return signedIn() && role() in ['admin', 'super_admin']; }
     function isSupplier() { return signedIn() && role() == 'supplier'; }
     function isDriver() { return signedIn() && role() == 'driver'; }
-    function supplierId() { return request.auth.token.supplierId; }
+    function supplierId() { return request.auth.token.get('supplierId', ''); }
     function order(orderId) { return get(/databases/$(database)/documents/orders/$(orderId)).data; }
     function canReadOrder(data) { return signedIn() && (isAdmin() || data.customerId == uid() || data.driverId == uid() || (isSupplier() && data.supplierId == supplierId())); }
     function conversation(conversationId) { return get(/databases/$(database)/documents/conversations/$(conversationId)).data; }
     function isParticipant(conversationId) { return signedIn() && uid() in conversation(conversationId).participantIds; }
-    function onlyChanges(fields) { return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields); }
+    function onlyChanges(fields) { return resource != null && request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields); }
 
     match /users/{userId} {
       allow read: if signedIn() && (userId == uid() || isAdmin());
