@@ -10,6 +10,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   orientation: 'portrait',
   userInterfaceStyle: 'automatic',
   experiments: { typedRoutes: true },
+  updates: {
+    url: 'https://u.expo.dev/c9efd986-48cd-4a91-8794-737edf4773b0'
+  },
+  runtimeVersion: {
+    policy: 'appVersion'
+  },
   web: { bundler: 'metro', output: 'static', favicon: './assets/favicon.png' },
   ios: {
     supportsTablet: true,
