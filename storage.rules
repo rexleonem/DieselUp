@@ -1,0 +1,34 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() { return request.auth != null; }
+    function role() { return request.auth.token.role; }
+    function isAdmin() { return signedIn() && role() in ['admin', 'super_admin']; }
+    function isImage() { return request.resource.contentType.matches('image/(jpeg|png|webp)'); }
+    function conversation(id) { return firestore.get(/databases/(default)/documents/conversations/$(id)).data; }
+    function order(id) { return firestore.get(/databases/(default)/documents/orders/$(id)).data; }
+
+    match /supplier-documents/{supplierId}/{userId}/{fileName} {
+      allow read: if signedIn() && (isAdmin() || (role() == 'supplier' && request.auth.token.supplierId == supplierId));
+      allow write: if signedIn() && role() == 'supplier' && request.auth.uid == userId
+        && request.auth.token.supplierId == supplierId && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('(application/pdf|image/jpeg|image/png)');
+    }
+    match /delivery-proofs/{orderId}/{fileName} {
+      allow read: if signedIn() && (isAdmin() || order(orderId).customerId == request.auth.uid || order(orderId).driverId == request.auth.uid || order(orderId).supplierId == request.auth.token.supplierId);
+      allow write: if signedIn() && role() == 'driver' && order(orderId).driverId == request.auth.uid
+        && request.resource.size < 8 * 1024 * 1024 && isImage();
+    }
+    match /conversations/{conversationId}/{userId}/{fileName} {
+      allow read: if signedIn() && request.auth.uid in conversation(conversationId).participantIds;
+      allow write: if signedIn() && request.auth.uid == userId && request.auth.uid in conversation(conversationId).participantIds
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('(application/pdf|image/jpeg|image/png|image/webp)');
+    }
+    match /avatars/{userId}/{fileName} {
+      allow read: if signedIn();
+      allow write: if signedIn() && request.auth.uid == userId && request.resource.size < 3 * 1024 * 1024 && isImage();
+    }
+    match /{allPaths=**} { allow read, write: if false; }
+  }
+}

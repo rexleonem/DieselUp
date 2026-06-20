@@ -1,0 +1,3 @@
+import { StyleSheet, View } from 'react-native'; import { env } from '@/lib/env'; import type { GeoPointValue } from '@/types/domain';
+export function TrackingMap({ customer, driver }: { customer: GeoPointValue; driver?: GeoPointValue; trail: GeoPointValue[] }) { const center = driver ?? customer; const src = `https://www.google.com/maps/embed/v1/view?key=${encodeURIComponent(env.googleMapsApiKey || '')}&center=${center.latitude},${center.longitude}&zoom=13`; return <View style={styles.wrap}>{env.googleMapsApiKey ? <iframe title="Live delivery map" src={src} style={{ width: '100%', height: '100%', border: 0 }} loading="lazy" /> : null}</View>; }
+const styles = StyleSheet.create({ wrap: { width: '100%', height: 300 } });

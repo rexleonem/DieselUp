@@ -1,0 +1,3 @@
+import { StyleSheet, View } from 'react-native'; import type { GeoPointValue } from '@/types/domain'; import { env } from '@/lib/env';
+export function LocationMap({ location }: { location: GeoPointValue; onChange?: (value: GeoPointValue) => void; interactive?: boolean }) { const src = `https://www.google.com/maps/embed/v1/view?key=${encodeURIComponent(env.googleMapsApiKey || '')}&center=${location.latitude},${location.longitude}&zoom=15`; return <View style={styles.wrap}>{env.googleMapsApiKey ? <iframe title="Delivery location map" src={src} style={{ width: '100%', height: '100%', border: 0 }} allowFullScreen loading="lazy" /> : null}</View>; }
+const styles = StyleSheet.create({ wrap: { width: '100%', height: 260, overflow: 'hidden' } });

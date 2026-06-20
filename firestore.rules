@@ -1,0 +1,129 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function uid() { return request.auth.uid; }
+    function role() { return request.auth.token.role; }
+    function isAdmin() { return signedIn() && role() in ['admin', 'super_admin']; }
+    function isSupplier() { return signedIn() && role() == 'supplier'; }
+    function isDriver() { return signedIn() && role() == 'driver'; }
+    function supplierId() { return request.auth.token.supplierId; }
+    function order(orderId) { return get(/databases/$(database)/documents/orders/$(orderId)).data; }
+    function canReadOrder(data) { return signedIn() && (isAdmin() || data.customerId == uid() || data.driverId == uid() || (isSupplier() && data.supplierId == supplierId())); }
+    function conversation(conversationId) { return get(/databases/$(database)/documents/conversations/$(conversationId)).data; }
+    function isParticipant(conversationId) { return signedIn() && uid() in conversation(conversationId).participantIds; }
+    function onlyChanges(fields) { return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields); }
+
+    match /users/{userId} {
+      allow read: if signedIn() && (userId == uid() || isAdmin());
+      allow create, delete: if false;
+      allow update: if signedIn() && userId == uid() && onlyChanges(['displayName', 'photoURL', 'updatedAt']);
+      match /devices/{deviceId} {
+        allow read, create, update, delete: if signedIn() && userId == uid();
+      }
+    }
+    match /customers/{customerId} {
+      allow read: if signedIn() && (customerId == uid() || isAdmin());
+      allow write: if false;
+      match /addresses/{addressId} {
+        allow read, delete: if signedIn() && customerId == uid();
+        allow create, update: if signedIn() && customerId == uid()
+          && request.resource.data.keys().hasOnly(['label', 'formattedAddress', 'location', 'placeId', 'instructions', 'isDefault', 'createdAt', 'updatedAt']);
+      }
+    }
+    match /suppliers/{id} {
+      allow read: if signedIn() && (resource.data.approvalStatus == 'approved' || isAdmin() || (isSupplier() && id == supplierId()));
+      allow create, delete: if false;
+      allow update: if isSupplier() && id == supplierId() && onlyChanges(['businessName', 'pricePerLitre', 'deliveryFee', 'serviceRadiusKm', 'location', 'address', 'isOpen', 'estimatedDeliveryMinutes', 'updatedAt']);
+      match /documents/{documentId} {
+        allow read: if signedIn() && (isAdmin() || (isSupplier() && id == supplierId()));
+        allow create, update: if isSupplier() && id == supplierId() && request.resource.data.uploadedBy == uid()
+          && request.resource.data.status == 'pending'
+          && request.resource.data.keys().hasOnly(['type', 'fileName', 'storagePath', 'url', 'status', 'uploadedAt', 'uploadedBy']);
+        allow delete: if false;
+      }
+    }
+    match /drivers/{driverId} {
+      allow read: if signedIn() && (driverId == uid() || isAdmin() || (isSupplier() && resource.data.supplierId == supplierId()));
+      allow create, delete: if false;
+      allow update: if isDriver() && driverId == uid() && onlyChanges(['online', 'lastSeenAt', 'updatedAt']);
+    }
+    match /orders/{orderId} {
+      allow read: if canReadOrder(resource.data);
+      allow write: if false;
+      match /private/{privateId} {
+        allow read: if signedIn() && privateId == 'customer' && order(orderId).customerId == uid();
+        allow write: if false;
+      }
+      match /activity/{activityId} { allow read: if canReadOrder(order(orderId)); allow write: if false; }
+    }
+    match /tracking/{orderId} {
+      allow read: if canReadOrder(order(orderId));
+      allow create, update: if isDriver() && order(orderId).driverId == uid()
+        && request.resource.data.driverId == uid() && request.resource.data.orderId == orderId;
+      allow delete: if false;
+      match /points/{pointId} {
+        allow read: if canReadOrder(order(orderId));
+        allow create: if isDriver() && order(orderId).driverId == uid()
+          && request.resource.data.driverId == uid() && request.resource.data.orderId == orderId;
+        allow update, delete: if false;
+      }
+    }
+    match /deliveries/{orderId} {
+      allow read: if canReadOrder(order(orderId));
+      allow create, delete: if false;
+      allow update: if isDriver() && order(orderId).driverId == uid() && onlyChanges(['proofUrl', 'proofUploadedAt']);
+    }
+    match /wallets/{userId} {
+      allow read: if signedIn() && (userId == uid() || isAdmin());
+      allow write: if false;
+      match /transactions/{transactionId} { allow read: if signedIn() && (userId == uid() || isAdmin()); allow write: if false; }
+    }
+    match /inventory/{tankId} {
+      allow read: if signedIn() && (isAdmin() || (isSupplier() && resource.data.supplierId == supplierId()));
+      allow write: if false;
+      match /history/{historyId} { allow read: if signedIn() && (isAdmin() || (isSupplier() && get(/databases/$(database)/documents/inventory/$(tankId)).data.supplierId == supplierId())); allow write: if false; }
+    }
+    match /notifications/{notificationId} {
+      allow read: if signedIn() && resource.data.userId == uid();
+      allow update: if signedIn() && resource.data.userId == uid() && onlyChanges(['readAt']);
+      allow create, delete: if false;
+    }
+    match /conversations/{conversationId} {
+      allow read: if signedIn() && uid() in resource.data.participantIds;
+      allow create, delete: if false;
+      allow update: if isParticipant(conversationId) && onlyChanges(['lastMessage', 'lastMessageAt']);
+      match /messages/{messageId} {
+        allow read: if isParticipant(conversationId);
+        allow create: if isParticipant(conversationId) && request.resource.data.senderId == uid()
+          && request.resource.data.keys().hasOnly(['senderId', 'text', 'attachmentUrl', 'readBy', 'createdAt'])
+          && ((request.resource.data.text is string && request.resource.data.text.size() <= 4000) || request.resource.data.text == null);
+        allow update, delete: if false;
+      }
+      match /typing/{userId} {
+        allow read: if isParticipant(conversationId);
+        allow create, update, delete: if isParticipant(conversationId) && userId == uid();
+      }
+      match /readReceipts/{userId} {
+        allow read: if isParticipant(conversationId);
+        allow create, update: if isParticipant(conversationId) && userId == uid();
+        allow delete: if false;
+      }
+    }
+    match /support_tickets/{ticketId} {
+      allow read: if signedIn() && (resource.data.customerId == uid() || isAdmin());
+      allow create: if signedIn() && request.resource.data.customerId == uid();
+      allow update: if isAdmin(); allow delete: if false;
+    }
+    match /reviews/{reviewId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.customerId == uid()
+        && order(request.resource.data.orderId).customerId == uid() && order(request.resource.data.orderId).status == 'delivered';
+      allow update, delete: if false;
+    }
+    match /analytics/{reportId} { allow read: if signedIn() && role() in ['supplier', 'admin', 'super_admin']; allow write: if false; }
+    match /settings/{settingId} { allow read: if signedIn(); allow write: if isAdmin(); }
+    match /customer_summaries/{summaryId} { allow read: if signedIn() && (isAdmin() || (isSupplier() && supplierId() in resource.data.supplierIds)); allow write: if false; }
+    match /{document=**} { allow read, write: if false; }
+  }
+}

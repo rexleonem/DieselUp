@@ -1,0 +1,14 @@
+node_modules/
+.expo/
+dist/
+web-build/
+.env
+.env.*.local
+google-services.json
+!config/firebase/google-services.json
+GoogleService-Info.plist
+functions/lib/
+functions/.env
+firebase-debug.log
+*.log
+.DS_Store

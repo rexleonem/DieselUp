@@ -1,0 +1,18 @@
+{
+  "indexes": [
+    { "collectionGroup": "orders", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "customerId", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "DESCENDING" }] },
+    { "collectionGroup": "orders", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "supplierId", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "DESCENDING" }] },
+    { "collectionGroup": "orders", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "driverId", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "DESCENDING" }] },
+    { "collectionGroup": "suppliers", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "approvalStatus", "order": "ASCENDING" }, { "fieldPath": "isOpen", "order": "ASCENDING" }, { "fieldPath": "pricePerLitre", "order": "ASCENDING" }] },
+    { "collectionGroup": "suppliers", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "approvalStatus", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "ASCENDING" }] },
+    { "collectionGroup": "inventory", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "supplierId", "order": "ASCENDING" }, { "fieldPath": "updatedAt", "order": "DESCENDING" }] },
+    { "collectionGroup": "drivers", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "supplierId", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "DESCENDING" }] },
+    { "collectionGroup": "notifications", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "userId", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "DESCENDING" }] },
+    { "collectionGroup": "conversations", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "participantIds", "arrayConfig": "CONTAINS" }, { "fieldPath": "lastMessageAt", "order": "DESCENDING" }] },
+    { "collectionGroup": "customer_summaries", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "supplierIds", "arrayConfig": "CONTAINS" }, { "fieldPath": "lastOrderAt", "order": "DESCENDING" }] }
+  ],
+  "fieldOverrides": [
+    { "collectionGroup": "tracking", "fieldPath": "location", "indexes": [] },
+    { "collectionGroup": "messages", "fieldPath": "text", "indexes": [] }
+  ]
+}
