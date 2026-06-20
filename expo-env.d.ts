@@ -1,23 +1,3 @@
 /// <reference types="expo/types" />
 
-declare namespace NodeJS {
-  interface ProcessEnv {
-    EXPO_PUBLIC_FIREBASE_API_KEY: string;
-    EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN: string;
-    EXPO_PUBLIC_FIREBASE_PROJECT_ID: string;
-    EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET: string;
-    EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: string;
-    EXPO_PUBLIC_FIREBASE_APP_ID: string;
-    EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID?: string;
-    EXPO_PUBLIC_GOOGLE_MAPS_API_KEY?: string;
-    EXPO_PUBLIC_EAS_PROJECT_ID?: string;
-    EXPO_PUBLIC_USE_EMULATORS?: string;
-    EXPO_PUBLIC_FIREBASE_APP_CHECK_SITE_KEY?: string;
-    EXPO_PUBLIC_FIREBASE_WEB_PUSH_VAPID_KEY?: string;
-    GOOGLE_SERVICES_JSON?: string;
-    GOOGLE_SERVICES_INFO_PLIST?: string;
-    EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID?: string;
-    EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID?: string;
-    EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID?: string;
-  }
-}
+// NOTE: This file should not be edited and should be in your git ignore
