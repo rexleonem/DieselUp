@@ -47,7 +47,7 @@ async function seedUser(user) {
 
   const supplierId = user.role === 'supplier' ? `supplier-${uid.slice(0, 10)}` : null;
   
-  await setDoc(doc(db, 'profiles', uid), {
+  await setDoc(doc(db, 'users', uid), {
     email: user.email,
     phoneNumber: user.phoneNumber,
     displayName: user.displayName,

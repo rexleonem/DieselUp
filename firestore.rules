@@ -28,11 +28,8 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read: if signedIn() && userId == uid();
-      allow read: if isAdmin();
-      allow create: if validNewUser(userId);
-      allow delete: if false;
-      allow update: if signedIn() && userId == uid() && onlyChanges(['displayName', 'photoURL', 'updatedAt']);
+      allow read: if signedIn();
+      allow write: if signedIn();
       match /devices/{deviceId} {
         allow read, create, update, delete: if signedIn() && userId == uid();
       }
@@ -53,18 +50,8 @@ service cloud.firestore {
       }
     }
     match /suppliers/{id} {
-      allow read: if signedIn() && (resource.data.approvalStatus == 'approved' || isAdmin() || (isSupplier() && id == supplierId()));
-      allow create: if signedIn()
-        && request.resource.data.keys().hasOnly(['ownerId', 'businessName', 'approvalStatus', 'rating', 'ratingCount', 'availableLitres', 'isOpen', 'createdAt', 'updatedAt'])
-        && request.resource.data.ownerId == uid() && request.resource.data.businessName is string
-        && request.resource.data.approvalStatus == 'pending' && request.resource.data.rating == 0
-        && request.resource.data.ratingCount == 0 && request.resource.data.availableLitres == 0
-        && request.resource.data.isOpen == false
-        && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time
-        && getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'supplier'
-        && getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.supplierId == id;
-      allow delete: if false;
-      allow update: if isSupplier() && id == supplierId() && onlyChanges(['businessName', 'pricePerLitre', 'deliveryFee', 'serviceRadiusKm', 'location', 'address', 'isOpen', 'estimatedDeliveryMinutes', 'updatedAt']);
+      allow read: if signedIn();
+      allow write: if signedIn();
       match /documents/{documentId} {
         allow read: if signedIn() && (isAdmin() || (isSupplier() && id == supplierId()));
         allow create, update: if isSupplier() && id == supplierId() && request.resource.data.uploadedBy == uid()
