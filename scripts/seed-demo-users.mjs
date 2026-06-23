@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 const apiKey = process.env.EXPO_PUBLIC_FIREBASE_API_KEY;
 const projectId = process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID;
 const password = process.env.DIESELUP_DEMO_PASSWORD;
@@ -33,6 +35,56 @@ async function authenticate(email) {
   }
 }
 
+const firestoreBase = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents`;
+const documentName = (path) => `projects/${projectId}/databases/(default)/documents/${path}`;
+const firestoreValue = (value) => {
+  if (value === null) return { nullValue: null };
+  if (typeof value === 'boolean') return { booleanValue: value };
+  if (typeof value === 'number') return { integerValue: String(value) };
+  return { stringValue: value };
+};
+const fields = (value) => Object.fromEntries(Object.entries(value).map(([key, item]) => [key, firestoreValue(item)]));
+const createWrite = (path, value) => ({
+  update: { name: documentName(path), fields: fields(value) },
+  updateTransforms: [
+    { fieldPath: 'createdAt', setToServerValue: 'REQUEST_TIME' },
+    { fieldPath: 'updatedAt', setToServerValue: 'REQUEST_TIME' }
+  ],
+  currentDocument: { exists: false }
+});
+
+async function bootstrapProfile(user, uid, idToken) {
+  const existing = await fetch(`${firestoreBase}/users/${uid}`, { headers: { Authorization: `Bearer ${idToken}` } });
+  if (existing.ok) {
+    const payload = await existing.json();
+    const existingRole = payload.fields?.role?.stringValue;
+    if (existingRole !== user.role) throw new Error(`${user.email} already has the ${existingRole ?? 'unknown'} role.`);
+    console.log(`Profile already exists: ${user.email}`);
+    return;
+  }
+  if (existing.status !== 404) throw new Error(`Unable to check ${user.email}: ${await existing.text()}`);
+
+  const supplierId = user.role === 'supplier' ? randomUUID().replaceAll('-', '').slice(0, 20) : null;
+  const writes = [createWrite(`users/${uid}`, {
+    email: user.email, phoneNumber: user.phoneNumber, displayName: user.displayName, photoURL: null,
+    role: user.role, status: user.role === 'customer' ? 'active' : 'pending', ...(supplierId ? { supplierId } : {})
+  })];
+  if (user.role === 'customer') writes.push(createWrite(`customers/${uid}`, { userId: uid }));
+  if (user.role === 'supplier') writes.push(createWrite(`suppliers/${supplierId}`, {
+    ownerId: uid, businessName: user.displayName, approvalStatus: 'pending', rating: 0,
+    ratingCount: 0, availableLitres: 0, isOpen: false
+  }));
+  if (user.role === 'driver') writes.push(createWrite(`drivers/${uid}`, {
+    userId: uid, displayName: user.displayName, email: user.email, phoneNumber: user.phoneNumber,
+    status: 'pending', online: false, completedDeliveries: 0, rating: 0
+  }));
+
+  const response = await fetch(`https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:commit`, {
+    method: 'POST', headers: { Authorization: `Bearer ${idToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ writes })
+  });
+  if (!response.ok) throw new Error(`Firestore profile creation failed for ${user.email}: ${await response.text()}`);
+}
+
 async function seedUser(user) {
   const auth = await authenticate(user.email);
   const updated = await identityRequest('update', { idToken: auth.idToken, displayName: user.displayName, returnSecureToken: true });
@@ -42,7 +94,7 @@ async function seedUser(user) {
     body: JSON.stringify({ data: { displayName: user.displayName, role: user.role, phoneNumber: user.phoneNumber } })
   });
   const payload = await response.json();
-  if (!response.ok || payload.error) throw new Error(payload.error?.message ?? `Profile creation failed for ${user.email}.`);
+  if (!response.ok || payload.error) await bootstrapProfile(user, updated.localId ?? auth.localId, updated.idToken);
   console.log(`Seeded ${user.role}: ${user.email}`);
 }
 

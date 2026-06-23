@@ -1,5 +1,6 @@
 import { httpsCallable } from 'firebase/functions';
-import { functions } from '@/lib/firebase';
+import { collection, doc, getDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { auth, db, functions } from '@/lib/firebase';
 import type { Address, OrderMoney } from '@/types/domain';
 
 export interface QuoteRequest { supplierId: string; quantityLitres: number; deliveryAddress: Address; isEmergency: boolean; scheduledFor?: string }
@@ -17,6 +18,41 @@ export const adjustInventory = (input: { tankId: string; deltaLitres: number; re
 export const inviteDriver = (input: { name: string; email: string; phoneNumber: string }) => httpsCallable(functions, 'inviteDriver')(input);
 export const reviewSupplier = (supplierId: string, status: 'under_review' | 'approved' | 'rejected', reason?: string) => httpsCallable(functions, 'reviewSupplier')({ supplierId, status, reason });
 export const reviewSupplierDocument = (supplierId: string, documentId: string, status: 'approved' | 'rejected', reason?: string) => httpsCallable(functions, 'reviewSupplierDocument')({ supplierId, documentId, status, reason });
-export const upsertAccountProfile = (input: { displayName: string; role: 'customer' | 'supplier' | 'driver'; phoneNumber?: string }) => httpsCallable(functions, 'upsertAccountProfile')(input);
+export const upsertAccountProfile = async (input: { displayName: string; role: 'customer' | 'supplier' | 'driver'; phoneNumber?: string }) => {
+  try {
+    await httpsCallable(functions, 'upsertAccountProfile')(input);
+    return;
+  } catch (callableError) {
+    const user = auth.currentUser;
+    if (!user) throw callableError;
+    const userRef = doc(db, 'users', user.uid);
+    if ((await getDoc(userRef)).exists()) throw callableError;
+
+    const batch = writeBatch(db);
+    const status = input.role === 'customer' ? 'active' : 'pending';
+    const supplierRef = input.role === 'supplier' ? doc(collection(db, 'suppliers')) : null;
+    batch.set(userRef, {
+      email: user.email ?? null,
+      phoneNumber: user.phoneNumber ?? input.phoneNumber ?? null,
+      displayName: input.displayName.trim(),
+      photoURL: user.photoURL ?? null,
+      role: input.role,
+      status,
+      ...(supplierRef ? { supplierId: supplierRef.id } : {}),
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+    if (input.role === 'customer') {
+      batch.set(doc(db, 'customers', user.uid), { userId: user.uid, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+    }
+    if (input.role === 'supplier' && supplierRef) {
+      batch.set(supplierRef, { ownerId: user.uid, businessName: input.displayName.trim(), approvalStatus: 'pending', rating: 0, ratingCount: 0, availableLitres: 0, isOpen: false, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+    }
+    if (input.role === 'driver') {
+      batch.set(doc(db, 'drivers', user.uid), { userId: user.uid, displayName: input.displayName.trim(), email: user.email ?? null, phoneNumber: user.phoneNumber ?? input.phoneNumber ?? null, status: 'pending', online: false, completedDeliveries: 0, rating: 0, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+    }
+    await batch.commit();
+  }
+};
 export const cancelOrder = (orderId: string) => httpsCallable(functions, 'cancelOrder')({ orderId });
 export const refundOrder = (orderId: string, reason: string) => httpsCallable(functions, 'refundOrder')({ orderId, reason });

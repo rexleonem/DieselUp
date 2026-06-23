@@ -3,20 +3,35 @@ service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
     function uid() { return request.auth.uid; }
-    function role() { return request.auth.token.get('role', ''); }
+    function profile() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
+    function role() { return signedIn() ? request.auth.token.get('role', profile().get('role', '')) : ''; }
     function isAdmin() { return signedIn() && role() in ['admin', 'super_admin']; }
     function isSupplier() { return signedIn() && role() == 'supplier'; }
     function isDriver() { return signedIn() && role() == 'driver'; }
-    function supplierId() { return request.auth.token.get('supplierId', ''); }
+    function supplierId() { return signedIn() ? request.auth.token.get('supplierId', profile().get('supplierId', '')) : ''; }
     function order(orderId) { return get(/databases/$(database)/documents/orders/$(orderId)).data; }
     function canReadOrder(data) { return signedIn() && (isAdmin() || data.customerId == uid() || data.driverId == uid() || (isSupplier() && data.supplierId == supplierId())); }
     function conversation(conversationId) { return get(/databases/$(database)/documents/conversations/$(conversationId)).data; }
     function isParticipant(conversationId) { return signedIn() && uid() in conversation(conversationId).participantIds; }
     function onlyChanges(fields) { return resource != null && request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields); }
+    function validNewUser(userId) {
+      return signedIn() && userId == uid()
+        && request.resource.data.keys().hasOnly(['email', 'phoneNumber', 'displayName', 'photoURL', 'role', 'status', 'supplierId', 'createdAt', 'updatedAt'])
+        && request.resource.data.keys().hasAll(['email', 'phoneNumber', 'displayName', 'photoURL', 'role', 'status', 'createdAt', 'updatedAt'])
+        && request.resource.data.email == request.auth.token.get('email', null)
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() >= 2 && request.resource.data.displayName.size() <= 100
+        && request.resource.data.role in ['customer', 'supplier', 'driver']
+        && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time
+        && ((request.resource.data.role == 'customer' && request.resource.data.status == 'active' && !request.resource.data.keys().hasAny(['supplierId']))
+          || (request.resource.data.role == 'supplier' && request.resource.data.status == 'pending' && request.resource.data.supplierId is string)
+          || (request.resource.data.role == 'driver' && request.resource.data.status == 'pending' && !request.resource.data.keys().hasAny(['supplierId'])));
+    }
 
     match /users/{userId} {
       allow read: if signedIn() && (userId == uid() || isAdmin());
-      allow create, delete: if false;
+      allow create: if validNewUser(userId);
+      allow delete: if false;
       allow update: if signedIn() && userId == uid() && onlyChanges(['displayName', 'photoURL', 'updatedAt']);
       match /devices/{deviceId} {
         allow read, create, update, delete: if signedIn() && userId == uid();
@@ -24,7 +39,12 @@ service cloud.firestore {
     }
     match /customers/{customerId} {
       allow read: if signedIn() && (customerId == uid() || isAdmin());
-      allow write: if false;
+      allow create: if signedIn() && customerId == uid()
+        && request.resource.data.keys().hasOnly(['userId', 'createdAt', 'updatedAt'])
+        && request.resource.data.userId == uid()
+        && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time
+        && getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'customer';
+      allow update, delete: if false;
       match /addresses/{addressId} {
         allow read, delete: if signedIn() && customerId == uid();
         allow create, update: if signedIn() && customerId == uid()
@@ -33,7 +53,16 @@ service cloud.firestore {
     }
     match /suppliers/{id} {
       allow read: if signedIn() && (resource.data.approvalStatus == 'approved' || isAdmin() || (isSupplier() && id == supplierId()));
-      allow create, delete: if false;
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['ownerId', 'businessName', 'approvalStatus', 'rating', 'ratingCount', 'availableLitres', 'isOpen', 'createdAt', 'updatedAt'])
+        && request.resource.data.ownerId == uid() && request.resource.data.businessName is string
+        && request.resource.data.approvalStatus == 'pending' && request.resource.data.rating == 0
+        && request.resource.data.ratingCount == 0 && request.resource.data.availableLitres == 0
+        && request.resource.data.isOpen == false
+        && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time
+        && getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'supplier'
+        && getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.supplierId == id;
+      allow delete: if false;
       allow update: if isSupplier() && id == supplierId() && onlyChanges(['businessName', 'pricePerLitre', 'deliveryFee', 'serviceRadiusKm', 'location', 'address', 'isOpen', 'estimatedDeliveryMinutes', 'updatedAt']);
       match /documents/{documentId} {
         allow read: if signedIn() && (isAdmin() || (isSupplier() && id == supplierId()));
@@ -45,7 +74,15 @@ service cloud.firestore {
     }
     match /drivers/{driverId} {
       allow read: if signedIn() && (driverId == uid() || isAdmin() || (isSupplier() && resource.data.supplierId == supplierId()));
-      allow create, delete: if false;
+      allow create: if signedIn() && driverId == uid()
+        && request.resource.data.keys().hasOnly(['userId', 'displayName', 'email', 'phoneNumber', 'status', 'online', 'completedDeliveries', 'rating', 'createdAt', 'updatedAt'])
+        && request.resource.data.userId == uid() && request.resource.data.displayName is string
+        && request.resource.data.email == request.auth.token.get('email', null)
+        && request.resource.data.status == 'pending' && request.resource.data.online == false
+        && request.resource.data.completedDeliveries == 0 && request.resource.data.rating == 0
+        && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time
+        && getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'driver';
+      allow delete: if false;
       allow update: if isDriver() && driverId == uid() && onlyChanges(['online', 'lastSeenAt', 'updatedAt']);
     }
     match /orders/{orderId} {
