@@ -28,7 +28,7 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read: if signedIn() &&  == uid();
+      allow read: if signedIn() && userId == uid();
       allow read: if isAdmin();
       allow create: if validNewUser(userId);
       allow delete: if false;
@@ -38,7 +38,7 @@ service cloud.firestore {
       }
     }
     match /customers/{customerId} {
-      allow read: if signedIn() &&  == uid();
+      allow read: if signedIn() && customerId == uid();
       allow read: if isAdmin();
       allow create: if signedIn() && customerId == uid()
         && request.resource.data.keys().hasOnly(['userId', 'createdAt', 'updatedAt'])
@@ -162,7 +162,7 @@ service cloud.firestore {
       }
     }
     match /support_tickets/{ticketId} {
-      allow read: if signedIn() &&  == uid();
+      allow read: if signedIn() && resource.data.customerId == uid();
       allow read: if isAdmin();
       allow create: if signedIn() && request.resource.data.customerId == uid();
       allow update: if isAdmin(); allow delete: if false;
