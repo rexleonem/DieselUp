@@ -55,7 +55,7 @@ export default function SupportDetailScreen() {
   };
 
   return (
-    <Screen header={<AppHeader title="Ticket Details" />} edges={['top', 'bottom']}>
+    <Screen header={<AppHeader title="Ticket Details" showBack />} edges={['top', 'bottom']}>
       <Card style={styles.card}>
         <View style={styles.header}>
           <View style={[styles.badge, { backgroundColor: statusColors[ticket.status] + '20' }]}>

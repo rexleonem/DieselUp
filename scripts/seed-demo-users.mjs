@@ -99,7 +99,12 @@ async function seedUser(user) {
     headers: { Authorization: `Bearer ${updated.idToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ data: { displayName: user.displayName, role: user.role, phoneNumber: user.phoneNumber } })
   });
-  const payload = await response.json();
+  let payload = {};
+  try {
+    payload = await response.json();
+  } catch (err) {
+    // Expected to fail if function is not deployed or is Gen 2
+  }
   if (!response.ok || payload.error) await bootstrapProfile(user, updated.localId ?? auth.localId, updated.idToken);
   console.log(`Seeded ${user.role}: ${user.email}`);
 }
