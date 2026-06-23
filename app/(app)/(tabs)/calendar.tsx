@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,7 +7,6 @@ import { Screen } from '@/components/ui/Screen';
 import { AppHeader } from '@/components/navigation/AppHeader';
 import { Text } from '@/components/ui/Text';
 import { Card } from '@/components/ui/Card';
-import { useAuth } from '@/providers/AuthProvider';
 import { useTheme } from '@/hooks/useTheme';
 import { useOrders } from '@/hooks/useOrders';
 import { formatLitres, formatNaira } from '@/lib/format';
@@ -15,7 +14,6 @@ import { colors, radii, spacing } from '@/theme/tokens';
 import type { Order } from '@/types/domain';
 
 export default function CalendarScreen() {
-  const { profile } = useAuth();
   const theme = useTheme();
   const { data: allOrders, loading } = useOrders(50);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -96,6 +94,7 @@ export default function CalendarScreen() {
 function OrderRow({ order }: { order: Order }) {
   const theme = useTheme();
   return (
+    <Pressable accessibilityRole="button" onPress={() => router.push(`/(app)/orders/${order.id}` as never)}>
     <Card style={styles.orderCard}>
       <View style={styles.orderIcon}>
         <Ionicons name="time" color={colors.primary} size={20} />
@@ -109,6 +108,7 @@ function OrderRow({ order }: { order: Order }) {
         <Text variant="caption" color={colors.accent}>{order.status.replace('_', ' ')}</Text>
       </View>
     </Card>
+    </Pressable>
   );
 }
 
@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
   calendar: { borderRadius: radii.lg, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
   eventsContainer: { marginTop: spacing.xl, paddingHorizontal: spacing.md },
   eventsTitle: { marginBottom: spacing.md },
-  emptyState: { alignItems: 'center', justifyContent: 'center', padding: spacing.xxl },
+  emptyState: { alignItems: 'center', justifyContent: 'center', padding: spacing['2xl'] },
   orderCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.sm },
   orderIcon: { width: 42, height: 42, borderRadius: 14, backgroundColor: '#FFF3E5', alignItems: 'center', justifyContent: 'center' },
   orderCopy: { flex: 1, gap: 3 },

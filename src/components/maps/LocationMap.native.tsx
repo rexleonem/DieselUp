@@ -5,7 +5,6 @@ import type { GeoPointValue } from '@/types/domain';
 export function LocationMap({ location, onChange, interactive = true }: { location: GeoPointValue; onChange?: (value: GeoPointValue) => void; interactive?: boolean }) {
   return (
     <MapView 
-      provider={null} 
       style={styles.map} 
       initialRegion={{ ...location, latitudeDelta: 0.035, longitudeDelta: 0.035 }} 
       region={{ ...location, latitudeDelta: 0.035, longitudeDelta: 0.035 }} 

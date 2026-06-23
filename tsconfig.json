@@ -6,5 +6,5 @@
     "types": ["nativewind/types", "node", "vitest/globals"]
   },
   "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts", "nativewind-env.d.ts"],
-  "exclude": ["functions", "node_modules"]
+  "exclude": ["admin", "functions", "node_modules"]
 }

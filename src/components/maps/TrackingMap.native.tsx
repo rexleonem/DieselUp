@@ -5,7 +5,6 @@ import type { GeoPointValue } from '@/types/domain';
 export function TrackingMap({ customer, driver, trail }: { customer: GeoPointValue; driver?: GeoPointValue; trail: GeoPointValue[] }) {
   return (
     <MapView 
-      provider={null} 
       style={styles.map} 
       initialRegion={{ ...(driver ?? customer), latitudeDelta: .06, longitudeDelta: .06 }}
     >

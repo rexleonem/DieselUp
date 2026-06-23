@@ -48,7 +48,7 @@ export default function NewTicketScreen() {
   }
 
   return (
-    <Screen header={<AppHeader title="New Ticket" showBack />} edges={['top', 'bottom']}>
+    <Screen header={<AppHeader title="New Ticket" showBack backHref="/(app)/support" />} edges={['top', 'bottom']}>
       <Card style={styles.formCard}>
         <Text variant="h3" style={{ marginBottom: spacing.md }}>How can we help?</Text>
         

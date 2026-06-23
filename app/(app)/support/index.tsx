@@ -13,13 +13,12 @@ import type { SupportTicket } from '@/types/domain';
 
 export default function SupportIndexScreen() {
   const { data: tickets, loading } = useSupportTickets();
-  const theme = useTheme();
 
   return (
-    <Screen header={<AppHeader title="Support Tickets" />}>
+    <Screen header={<AppHeader title="Support Tickets" showBack backHref="/(app)/(tabs)/more" />}>
       <View style={styles.headerRow}>
         <Text variant="h2">Your Tickets</Text>
-        <Pressable onPress={() => router.push('/support/new')} style={styles.newButton}>
+        <Pressable onPress={() => router.push('/(app)/support/new' as never)} style={styles.newButton}>
           <Ionicons name="add" size={20} color="white" />
           <Text variant="label" color="white">New Ticket</Text>
         </Pressable>
@@ -33,7 +32,7 @@ export default function SupportIndexScreen() {
           title="No support tickets" 
           message="If you have an issue, feel free to open a ticket." 
           actionTitle="Create Ticket" 
-          onAction={() => router.push('/support/new')} 
+          onAction={() => router.push('/(app)/support/new' as never)} 
         />
       ) : (
         <View style={styles.list}>
@@ -53,7 +52,7 @@ function TicketRow({ ticket }: { ticket: SupportTicket }) {
   };
 
   return (
-    <Pressable onPress={() => router.push(`/support/${ticket.id}`)}>
+    <Pressable onPress={() => router.push(`/(app)/support/${ticket.id}` as never)}>
       <Card style={styles.ticketCard}>
         <View style={styles.iconContainer}>
           <Ionicons name="ticket-outline" size={20} color={colors.primary} />

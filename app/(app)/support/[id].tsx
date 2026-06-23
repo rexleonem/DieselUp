@@ -37,13 +37,13 @@ export default function SupportDetailScreen() {
   }, [id]);
 
   if (loading) {
-    return <Screen header={<AppHeader title="Ticket Details" />}><ActivityIndicator style={{ marginTop: 40 }} color={colors.primary} /></Screen>;
+    return <Screen header={<AppHeader title="Ticket Details" showBack backHref="/(app)/support" />}><ActivityIndicator style={{ marginTop: 40 }} color={colors.primary} /></Screen>;
   }
 
   if (!ticket) {
     return (
-      <Screen header={<AppHeader title="Ticket Not Found" />}>
-        <Text color={theme.colors.muted} style={{ textAlign: 'center', marginTop: 40 }}>We couldn't find this support ticket.</Text>
+      <Screen header={<AppHeader title="Ticket Not Found" showBack backHref="/(app)/support" />}>
+        <Text color={theme.colors.muted} style={{ textAlign: 'center', marginTop: 40 }}>We could not find this support ticket.</Text>
       </Screen>
     );
   }
@@ -55,7 +55,7 @@ export default function SupportDetailScreen() {
   };
 
   return (
-    <Screen header={<AppHeader title="Ticket Details" showBack />} edges={['top', 'bottom']}>
+    <Screen header={<AppHeader title="Ticket Details" showBack backHref="/(app)/support" />} edges={['top', 'bottom']}>
       <Card style={styles.card}>
         <View style={styles.header}>
           <View style={[styles.badge, { backgroundColor: statusColors[ticket.status] + '20' }]}>

@@ -8,23 +8,39 @@ import { useTheme } from '@/hooks/useTheme';
 import { colors, radii, spacing } from '@/theme/tokens';
 import { initials } from '@/lib/format';
 
-export function AppHeader({ title, showBack }: { title?: string; showBack?: boolean }) {
+export function AppHeader({
+  title,
+  showBack,
+  backHref = '/(app)/(tabs)',
+  showNotificationsAction = true,
+  showProfileAction = true
+}: {
+  title?: string;
+  showBack?: boolean;
+  backHref?: string;
+  showNotificationsAction?: boolean;
+  showProfileAction?: boolean;
+}) {
   const { profile } = useAuth(); const theme = useTheme();
+  const goBack = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace(backHref as never);
+  };
   return (
     <View style={[styles.header, { backgroundColor: theme.colors.background }]}>
       <View style={styles.inner}>
         <View style={styles.titleContainer}>
-          {showBack && router.canGoBack() && (
-            <Pressable onPress={() => router.back()} style={styles.backButton}>
+          {showBack && (
+            <Pressable accessibilityLabel="Go back" onPress={goBack} style={styles.backButton}>
               <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
             </Pressable>
           )}
           {title ? <Text variant="h2" style={styles.pageTitle}>{title}</Text> : <Brand compact />}
         </View>
-        <View style={styles.actions}>
-          <Pressable accessibilityLabel="Notifications" onPress={() => router.push('/notifications')} style={[styles.action, { backgroundColor: theme.colors.surface }]}><Ionicons name="notifications-outline" size={20} color={theme.colors.text} /></Pressable>
-          <Pressable accessibilityLabel="Profile" onPress={() => router.push('/profile')} style={styles.avatar}><Text variant="caption" color="white" style={styles.avatarText}>{initials(profile?.displayName ?? '')}</Text></Pressable>
-        </View>
+        {(showNotificationsAction || showProfileAction) && <View style={styles.actions}>
+          {showNotificationsAction && <Pressable accessibilityLabel="Notifications" onPress={() => router.push('/notifications' as never)} style={[styles.action, { backgroundColor: theme.colors.surface }]}><Ionicons name="notifications-outline" size={20} color={theme.colors.text} /></Pressable>}
+          {showProfileAction && <Pressable accessibilityLabel="Profile" onPress={() => router.push('/profile' as never)} style={styles.avatar}><Text variant="caption" color="white" style={styles.avatarText}>{initials(profile?.displayName ?? '')}</Text></Pressable>}
+        </View>}
       </View>
     </View>
   );
