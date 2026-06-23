@@ -43,6 +43,7 @@ export default function ProfileScreen() {
     : profile?.role === 'admin' || profile?.role === 'super_admin'
       ? [
           { label: 'Supplier approvals', description: 'Review supplier applications', icon: 'shield-checkmark-outline', href: '/admin/suppliers' },
+          { label: 'Manual funding approvals', description: 'Review bank transfer proof for wallet and order payments', icon: 'cash-outline', href: '/admin/manual-funding' },
           { label: 'Reports', description: 'Analytics exports and operational reports', icon: 'bar-chart-outline', href: '/reports' },
           { label: 'System settings', description: 'Market price and platform controls', icon: 'settings-outline', href: '/admin/settings' }
         ]

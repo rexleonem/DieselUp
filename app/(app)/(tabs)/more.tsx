@@ -32,6 +32,7 @@ const supplierItems: MenuItem[] = [
 
 const adminItems: MenuItem[] = [
   { label: 'Supplier approvals', description: 'Review applications and supplier documents', icon: 'shield-checkmark-outline', href: '/admin/suppliers' },
+  { label: 'Manual funding approvals', description: 'Approve wallet funding and direct bank-transfer order payments', icon: 'cash-outline', href: '/admin/manual-funding' },
   { label: 'Reports', description: 'Daily analytics exports and network reports', icon: 'bar-chart-outline', href: '/reports' },
   { label: 'System settings', description: 'Market reference price, tax, and platform controls', icon: 'settings-outline', href: '/admin/settings' }
 ];

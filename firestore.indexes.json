@@ -9,7 +9,10 @@
     { "collectionGroup": "drivers", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "supplierId", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "DESCENDING" }] },
     { "collectionGroup": "notifications", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "userId", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "DESCENDING" }] },
     { "collectionGroup": "conversations", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "participantIds", "arrayConfig": "CONTAINS" }, { "fieldPath": "lastMessageAt", "order": "DESCENDING" }] },
-    { "collectionGroup": "customer_summaries", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "supplierIds", "arrayConfig": "CONTAINS" }, { "fieldPath": "lastOrderAt", "order": "DESCENDING" }] }
+    { "collectionGroup": "customer_summaries", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "supplierIds", "arrayConfig": "CONTAINS" }, { "fieldPath": "lastOrderAt", "order": "DESCENDING" }] },
+    { "collectionGroup": "manual_funding_requests", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "status", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "ASCENDING" }] },
+    { "collectionGroup": "manual_funding_requests", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "status", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "DESCENDING" }] },
+    { "collectionGroup": "manual_funding_requests", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "userId", "order": "ASCENDING" }, { "fieldPath": "purpose", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "DESCENDING" }] }
   ],
   "fieldOverrides": [
     { "collectionGroup": "tracking", "fieldPath": "location", "indexes": [] },

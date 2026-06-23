@@ -1,17 +1,17 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { create } from 'zustand';
-import type { Address } from '@/types/domain';
+import type { Address, DeliveryMode } from '@/types/domain';
 
 type ThemeMode = 'system' | 'light' | 'dark';
 interface AppState {
   themeMode: ThemeMode; setThemeMode: (mode: ThemeMode) => void;
-  orderDraft: { address?: Address; quantityLitres?: number; supplierId?: string; isEmergency: boolean; scheduledFor?: string };
+  orderDraft: { address?: Address; quantityLitres?: number; supplierId?: string; isEmergency: boolean; deliveryMode: DeliveryMode; scheduledFor?: string };
   patchOrderDraft: (patch: Partial<AppState['orderDraft']>) => void; clearOrderDraft: () => void;
 }
 
 const storageKey = 'dieselup-preferences';
-const defaultOrderDraft: AppState['orderDraft'] = { isEmergency: false };
+const defaultOrderDraft: AppState['orderDraft'] = { isEmergency: false, deliveryMode: 'quick' };
 
 export const useAppStore = create<AppState>()((set) => ({
   themeMode: 'system', setThemeMode: (themeMode) => set({ themeMode }),

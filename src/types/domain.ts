@@ -4,6 +4,8 @@ export type UserRole = 'customer' | 'supplier' | 'driver' | 'admin' | 'super_adm
 export type OrderStatus = 'pending' | 'payment_pending' | 'paid' | 'supplier_assigned' | 'driver_assigned' | 'en_route' | 'arrived' | 'delivered' | 'cancelled' | 'refunded';
 export type TransactionType = 'credit' | 'debit' | 'refund' | 'bonus' | 'withdrawal';
 export type ApprovalStatus = 'pending' | 'under_review' | 'approved' | 'rejected';
+export type DeliveryMode = 'quick' | 'emergency' | 'scheduled';
+export type PaymentMethod = 'paystack' | 'wallet' | 'bank_transfer';
 
 export interface GeoPointValue { latitude: number; longitude: number }
 export interface Address { id?: string; label: string; formattedAddress: string; location: GeoPointValue; placeId?: string; instructions?: string; isDefault?: boolean }
@@ -19,13 +21,20 @@ export interface Supplier {
 export interface OrderMoney { fuelCost: number; deliveryFee: number; tax: number; total: number; currency: 'NGN' }
 export interface Order {
   id: string; orderNumber: string; customerId: string; supplierId: string; driverId?: string; status: OrderStatus;
-  quantityLitres: number; deliveryAddress: Address; money: OrderMoney; paymentMethod: 'paystack' | 'wallet';
+  quantityLitres: number; deliveryAddress: Address; money: OrderMoney; paymentMethod: PaymentMethod;
   paymentReference?: string; estimatedArrival?: Timestamp; createdAt: Timestamp; updatedAt: Timestamp; scheduledFor?: Timestamp;
-  isEmergency: boolean; verificationMethod: 'otp' | 'qr';
+  isEmergency: boolean; deliveryMode?: DeliveryMode; verificationMethod: 'otp' | 'qr'; manualFundingRequestId?: string;
 }
 export interface TrackingPoint { orderId: string; driverId: string; location: GeoPointValue; heading?: number; speed?: number; accuracy?: number; recordedAt: Timestamp }
 export interface Wallet { userId: string; availableBalance: number; pendingBalance: number; currency: 'NGN'; updatedAt: Timestamp }
 export interface WalletTransaction { id: string; userId: string; type: TransactionType; amount: number; balanceAfter: number; reference: string; status: 'pending' | 'successful' | 'failed'; description: string; createdAt: Timestamp }
+export interface BankAccount { bankName: string; accountName: string; accountNumber: string; referencePrefix?: string; instructions?: string; updatedAt?: Timestamp }
+export interface ManualFundingRequest {
+  id: string; userId: string; userName?: string | null; amount: number; currency: 'NGN'; purpose: 'wallet' | 'order_payment';
+  orderId?: string | null; orderNumber?: string | null; status: 'pending' | 'approved' | 'rejected'; proofUrl: string; proofStoragePath?: string | null;
+  transferReference?: string | null; bankName?: string | null; accountName?: string | null; accountNumber?: string | null;
+  reviewedBy?: string | null; reviewNote?: string | null; createdAt: Timestamp; updatedAt?: Timestamp; reviewedAt?: Timestamp;
+}
 export interface InventoryTank { id: string; supplierId: string; name: string; capacityLitres: number; availableLitres: number; lowStockThreshold: number; updatedAt: Timestamp }
 export interface Delivery { id: string; orderId: string; supplierId: string; driverId: string; status: OrderStatus; proofUrl?: string; customerVerifiedAt?: Timestamp; completedAt?: Timestamp }
 export interface Notification { id: string; userId: string; title: string; body: string; event: string; readAt?: Timestamp; data?: Record<string, string>; createdAt: Timestamp }

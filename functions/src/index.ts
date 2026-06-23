@@ -39,7 +39,24 @@ async function rateLimit(uid: string, action: string, limit: number, windowSecon
 }
 const locationSchema = z.object({ latitude: z.number().gte(-90).lte(90), longitude: z.number().gte(-180).lte(180) });
 const addressSchema = z.object({ label: z.string().trim().min(1).max(80), formattedAddress: z.string().trim().min(5).max(500), location: locationSchema, placeId: z.string().max(300).optional(), instructions: z.string().max(500).optional() });
-const quoteSchema = z.object({ supplierId: z.string().min(1), quantityLitres: z.number().int().min(50).max(50_000), deliveryAddress: addressSchema, isEmergency: z.boolean(), scheduledFor: z.iso.datetime().optional() });
+const deliveryModeSchema = z.enum(['quick', 'emergency', 'scheduled']);
+const quoteSchema = z.object({ supplierId: z.string().min(1), quantityLitres: z.number().int().min(50).max(50_000), deliveryAddress: addressSchema, isEmergency: z.boolean(), deliveryMode: deliveryModeSchema.optional(), scheduledFor: z.iso.datetime().optional() });
+const manualFundingSchema = z.object({
+  amount: z.number().min(100).max(50_000_000),
+  purpose: z.enum(['wallet', 'order_payment']),
+  proofUrl: z.url(),
+  proofStoragePath: z.string().max(600).optional(),
+  transferReference: z.string().trim().max(120).optional(),
+  orderId: z.string().optional(),
+  orderNumber: z.string().optional(),
+  bankAccount: z.object({
+    bankName: z.string().trim().min(2).max(100),
+    accountName: z.string().trim().min(2).max(120),
+    accountNumber: z.string().trim().min(5).max(30),
+    referencePrefix: z.string().trim().max(40).optional(),
+    instructions: z.string().trim().max(500).optional()
+  }).nullable().optional()
+});
 const haversineKm = (a: z.infer<typeof locationSchema>, b: z.infer<typeof locationSchema>) => { const rad = (value: number) => value * Math.PI / 180; const dLat = rad(b.latitude - a.latitude); const dLon = rad(b.longitude - a.longitude); const value = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.latitude)) * Math.cos(rad(b.latitude)) * Math.sin(dLon / 2) ** 2; return 6371 * 2 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value)); };
 const money = (value: number) => Math.round(value * 100) / 100;
 const hashCode = (value: string, salt: string) => scryptSync(value, salt, 32).toString('hex');
@@ -93,7 +110,7 @@ export const getOrderQuote = onCall(callOptions, async (request) => {
   if ((supplier.availableLitres ?? 0) < input.quantityLitres) throw new HttpsError('failed-precondition', 'Supplier inventory changed. Choose another supplier.');
   if (!supplier.location || haversineKm(supplier.location, input.deliveryAddress.location) > (supplier.serviceRadiusKm ?? 0)) throw new HttpsError('out-of-range', 'Delivery location is outside this supplier’s service area.');
   const settings = settingsSnap.data() ?? {}; const fuelCost = money(input.quantityLitres * supplier.pricePerLitre); const baseDelivery = money(supplier.deliveryFee ?? 0); const emergencyFee = input.isEmergency ? money(fuelCost * (settings.emergencySurchargeRate ?? 0)) : 0; const tax = money((fuelCost + baseDelivery + emergencyFee) * (settings.taxRate ?? 0)); const total = money(fuelCost + baseDelivery + emergencyFee + tax);
-  const ref = db.collection('quotes').doc(); const expiresAt = Timestamp.fromMillis(Date.now() + 10 * 60_000); const quote = { customerId: uid, supplierId: input.supplierId, quantityLitres: input.quantityLitres, deliveryAddress: input.deliveryAddress, isEmergency: input.isEmergency, scheduledFor: input.scheduledFor ?? null, money: { fuelCost, deliveryFee: baseDelivery + emergencyFee, tax, total, currency: 'NGN' }, estimatedDeliveryMinutes: supplier.estimatedDeliveryMinutes ?? 90, expiresAt, createdAt: FieldValue.serverTimestamp(), usedAt: null };
+  const ref = db.collection('quotes').doc(); const expiresAt = Timestamp.fromMillis(Date.now() + 10 * 60_000); const deliveryMode = input.deliveryMode ?? (input.isEmergency ? 'emergency' : input.scheduledFor ? 'scheduled' : 'quick'); const quote = { customerId: uid, supplierId: input.supplierId, quantityLitres: input.quantityLitres, deliveryAddress: input.deliveryAddress, isEmergency: input.isEmergency, deliveryMode, scheduledFor: input.scheduledFor ?? null, money: { fuelCost, deliveryFee: baseDelivery + emergencyFee, tax, total, currency: 'NGN' }, estimatedDeliveryMinutes: supplier.estimatedDeliveryMinutes ?? 90, expiresAt, createdAt: FieldValue.serverTimestamp(), usedAt: null };
   await ref.set(quote); return { quoteId: ref.id, expiresAt: expiresAt.toDate().toISOString(), money: quote.money, available: true, estimatedDeliveryMinutes: quote.estimatedDeliveryMinutes };
 });
 
@@ -104,8 +121,18 @@ async function paystackInitialize(secret: string, email: string, amount: number,
 
 export const createOrder = onCall({ ...callOptions, secrets: [paystackSecret] }, async (request) => {
   const { uid } = requireRole(request, ['customer']); await rateLimit(uid, 'order', 8, 300);
-  const input = quoteSchema.extend({ quoteId: z.string().min(1), paymentMethod: z.enum(['paystack', 'wallet']), verificationMethod: z.enum(['otp', 'qr']) }).parse(request.data);
-  const quoteRef = db.doc(`quotes/${input.quoteId}`); const orderRef = db.collection('orders').doc(); const verificationCode = randomBytes(3).toString('hex').toUpperCase(); const salt = randomBytes(16).toString('hex'); const orderNumber = `DU-${new Date().toISOString().slice(2, 10).replaceAll('-', '')}-${orderRef.id.slice(0, 6).toUpperCase()}`; let total = 0;
+  const input = quoteSchema.extend({
+    quoteId: z.string().min(1),
+    paymentMethod: z.enum(['paystack', 'wallet', 'bank_transfer']),
+    verificationMethod: z.enum(['otp', 'qr']),
+    manualFundingProofUrl: z.url().optional(),
+    manualFundingProofPath: z.string().max(600).optional(),
+    manualFundingTransferReference: z.string().trim().max(120).optional(),
+    bankAccount: manualFundingSchema.shape.bankAccount
+  }).parse(request.data);
+  if (input.paymentMethod === 'bank_transfer' && !input.manualFundingProofUrl) throw new HttpsError('invalid-argument', 'Transfer proof is required for manual bank transfer orders.');
+  const requester = input.paymentMethod === 'bank_transfer' ? await getAuth().getUser(uid) : null;
+  const quoteRef = db.doc(`quotes/${input.quoteId}`); const orderRef = db.collection('orders').doc(); const manualRef = input.paymentMethod === 'bank_transfer' ? db.collection('manual_funding_requests').doc() : null; const verificationCode = randomBytes(3).toString('hex').toUpperCase(); const salt = randomBytes(16).toString('hex'); const orderNumber = `DU-${new Date().toISOString().slice(2, 10).replaceAll('-', '')}-${orderRef.id.slice(0, 6).toUpperCase()}`; let total = 0;
   await db.runTransaction(async (transaction) => {
     const quoteSnap = await transaction.get(quoteRef); if (!quoteSnap.exists) throw new HttpsError('not-found', 'Quote not found.'); const quote = quoteSnap.data()!;
     if (quote.customerId !== uid || quote.usedAt || quote.expiresAt.toMillis() < Date.now()) throw new HttpsError('failed-precondition', 'Quote expired or already used.');
@@ -114,16 +141,65 @@ export const createOrder = onCall({ ...callOptions, secrets: [paystackSecret] },
     total = quote.money.total; let status = 'payment_pending';
     if (input.paymentMethod === 'wallet') { const walletRef = db.doc(`wallets/${uid}`); const walletSnap = await transaction.get(walletRef); const balance = walletSnap.data()?.availableBalance ?? 0; if (balance < total) throw new HttpsError('failed-precondition', 'Insufficient wallet balance.'); const next = money(balance - total); transaction.set(walletRef, { userId: uid, availableBalance: next, pendingBalance: walletSnap.data()?.pendingBalance ?? 0, currency: 'NGN', updatedAt: FieldValue.serverTimestamp() }, { merge: true }); const txRef = walletRef.collection('transactions').doc(); transaction.set(txRef, { userId: uid, type: 'debit', amount: total, balanceAfter: next, reference: orderRef.id, status: 'successful', description: `Diesel order ${orderNumber}`, createdAt: FieldValue.serverTimestamp() }); status = 'paid'; }
     transaction.update(supplierRef, { availableLitres: FieldValue.increment(-quote.quantityLitres), updatedAt: FieldValue.serverTimestamp() }); transaction.update(quoteRef, { usedAt: FieldValue.serverTimestamp(), orderId: orderRef.id });
-    transaction.set(orderRef, { orderNumber, customerId: uid, supplierId: quote.supplierId, status, quantityLitres: quote.quantityLitres, deliveryAddress: quote.deliveryAddress, money: quote.money, paymentMethod: input.paymentMethod, paymentReference: null, estimatedArrival: Timestamp.fromMillis(Date.now() + quote.estimatedDeliveryMinutes * 60_000), scheduledFor: quote.scheduledFor ? Timestamp.fromDate(new Date(quote.scheduledFor)) : null, isEmergency: quote.isEmergency, verificationMethod: input.verificationMethod, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+    const deliveryMode = quote.deliveryMode ?? input.deliveryMode ?? (quote.isEmergency ? 'emergency' : quote.scheduledFor ? 'scheduled' : 'quick');
+    transaction.set(orderRef, { orderNumber, customerId: uid, supplierId: quote.supplierId, status, quantityLitres: quote.quantityLitres, deliveryAddress: quote.deliveryAddress, money: quote.money, paymentMethod: input.paymentMethod, paymentReference: null, estimatedArrival: Timestamp.fromMillis(Date.now() + quote.estimatedDeliveryMinutes * 60_000), scheduledFor: quote.scheduledFor ? Timestamp.fromDate(new Date(quote.scheduledFor)) : null, isEmergency: quote.isEmergency, deliveryMode, verificationMethod: input.verificationMethod, manualFundingRequestId: manualRef?.id ?? null, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
     transaction.set(db.doc(`deliveries/${orderRef.id}`), { orderId: orderRef.id, supplierId: quote.supplierId, status, verificationSalt: salt, verificationHash: hashCode(verificationCode, salt), verificationMethod: input.verificationMethod, proofUrl: null, createdAt: FieldValue.serverTimestamp() });
     transaction.set(db.doc(`orders/${orderRef.id}/private/customer`), { verificationCode, createdAt: FieldValue.serverTimestamp() });
+    if (manualRef) transaction.set(manualRef, { userId: uid, userName: requester?.displayName ?? requester?.email ?? null, amount: total, currency: 'NGN', purpose: 'order_payment', orderId: orderRef.id, orderNumber, status: 'pending', proofUrl: input.manualFundingProofUrl, proofStoragePath: input.manualFundingProofPath ?? null, transferReference: input.manualFundingTransferReference ?? '', bankName: input.bankAccount?.bankName ?? null, accountName: input.bankAccount?.accountName ?? null, accountNumber: input.bankAccount?.accountNumber ?? null, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
   });
   await createNotification(uid, 'Order placed', `${orderNumber} has been created. Your delivery verification code is ${verificationCode}.`, 'order_placed', { orderId: orderRef.id });
-  if (input.paymentMethod === 'wallet') return { orderId: orderRef.id, orderNumber };
+  if (input.paymentMethod === 'wallet' || input.paymentMethod === 'bank_transfer') return { orderId: orderRef.id, orderNumber, manualFundingRequestId: manualRef?.id };
   const user = await getAuth().getUser(uid); if (!user.email) throw new HttpsError('failed-precondition', 'An email address is required for Paystack.'); const reference = `order_${orderRef.id}_${Date.now()}`; const payment = await paystackInitialize(paystackSecret.value(), user.email, total, reference, { purpose: 'order', orderId: orderRef.id, customerId: uid }); await orderRef.update({ paymentReference: reference }); return { orderId: orderRef.id, orderNumber, paymentUrl: payment.authorization_url, paymentReference: payment.reference };
 });
 
 export const initializeWalletFunding = onCall({ ...callOptions, secrets: [paystackSecret] }, async (request) => { const { uid } = requireUser(request); await rateLimit(uid, 'wallet_fund', 5, 300); const input = z.object({ amount: z.number().min(100).max(10_000_000) }).parse(request.data); const user = await getAuth().getUser(uid); if (!user.email) throw new HttpsError('failed-precondition', 'Add an email address before funding your wallet.'); const reference = `wallet_${uid}_${Date.now()}`; await db.doc(`payment_intents/${reference}`).set({ userId: uid, purpose: 'wallet', amount: input.amount, status: 'pending', createdAt: FieldValue.serverTimestamp() }); const payment = await paystackInitialize(paystackSecret.value(), user.email, input.amount, reference, { purpose: 'wallet', customerId: uid }); return { authorizationUrl: payment.authorization_url, reference }; });
+
+export const submitManualFundingRequest = onCall(callOptions, async (request) => {
+  const { uid } = requireUser(request); await rateLimit(uid, 'manual_fund', 8, 300);
+  const input = manualFundingSchema.parse(request.data);
+  if (input.purpose !== 'wallet') throw new HttpsError('invalid-argument', 'Order payment proofs must be submitted during checkout.');
+  const user = await getAuth().getUser(uid);
+  const ref = db.collection('manual_funding_requests').doc();
+  await ref.set({ userId: uid, userName: user.displayName ?? user.email ?? null, amount: input.amount, currency: 'NGN', purpose: input.purpose, orderId: null, orderNumber: null, status: 'pending', proofUrl: input.proofUrl, proofStoragePath: input.proofStoragePath ?? null, transferReference: input.transferReference ?? '', bankName: input.bankAccount?.bankName ?? null, accountName: input.bankAccount?.accountName ?? null, accountNumber: input.bankAccount?.accountNumber ?? null, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+  await createNotification(uid, 'Manual funding submitted', `${money(input.amount).toLocaleString('en-NG')} NGN wallet funding proof is waiting for admin approval.`, 'manual_funding_submitted', { requestId: ref.id });
+  return { requestId: ref.id };
+});
+
+export const reviewManualFundingRequest = onCall(callOptions, async (request) => {
+  const { uid } = requireRole(request, ['admin', 'super_admin']);
+  const input = z.object({ requestId: z.string().min(1), status: z.enum(['approved', 'rejected']), reviewNote: z.string().trim().max(500).optional() }).parse(request.data);
+  const requestRef = db.doc(`manual_funding_requests/${input.requestId}`);
+  let targetUser = '';
+  let notificationTitle = '';
+  let notificationBody = '';
+  await db.runTransaction(async (transaction) => {
+    const requestSnap = await transaction.get(requestRef); if (!requestSnap.exists) throw new HttpsError('not-found', 'Manual funding request not found.');
+    const funding = requestSnap.data()!; if (funding.status !== 'pending') throw new HttpsError('failed-precondition', 'This request has already been reviewed.');
+    targetUser = funding.userId; notificationTitle = input.status === 'approved' ? 'Manual payment approved' : 'Manual payment rejected'; notificationBody = input.status === 'approved' ? 'Your manual payment has been approved.' : 'Your manual payment was rejected. Please contact support if this looks wrong.';
+    transaction.update(requestRef, { status: input.status, reviewNote: input.reviewNote ?? null, reviewedBy: uid, reviewedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+    if (input.status === 'approved' && funding.purpose === 'wallet') {
+      const walletRef = db.doc(`wallets/${funding.userId}`); const walletSnap = await transaction.get(walletRef); const balance = walletSnap.data()?.availableBalance ?? 0; const next = money(balance + funding.amount);
+      transaction.set(walletRef, { userId: funding.userId, availableBalance: next, pendingBalance: walletSnap.data()?.pendingBalance ?? 0, currency: 'NGN', updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+      transaction.set(walletRef.collection('transactions').doc(), { userId: funding.userId, type: 'credit', amount: funding.amount, balanceAfter: next, reference: input.requestId, status: 'successful', description: 'Manual bank transfer wallet funding', createdAt: FieldValue.serverTimestamp() });
+      notificationBody = `Your wallet has been credited with ${money(funding.amount).toLocaleString('en-NG')} NGN.`;
+    }
+    if (funding.purpose === 'order_payment' && funding.orderId) {
+      const orderRef = db.doc(`orders/${funding.orderId}`); const orderSnap = await transaction.get(orderRef); const order = orderSnap.data(); if (!order) throw new HttpsError('not-found', 'Linked order not found.');
+      if (input.status === 'approved') {
+        transaction.update(orderRef, { status: 'paid', paidAt: FieldValue.serverTimestamp(), manualPaidAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+        transaction.update(db.doc(`deliveries/${funding.orderId}`), { status: 'paid', updatedAt: FieldValue.serverTimestamp() });
+        notificationBody = `${order.orderNumber} bank transfer has been approved. Supplier assignment can now continue.`;
+      } else {
+        transaction.update(orderRef, { status: 'cancelled', cancellationReason: 'Manual bank transfer rejected', updatedAt: FieldValue.serverTimestamp() });
+        transaction.update(db.doc(`deliveries/${funding.orderId}`), { status: 'cancelled', updatedAt: FieldValue.serverTimestamp() });
+        transaction.update(db.doc(`suppliers/${order.supplierId}`), { availableLitres: FieldValue.increment(order.quantityLitres), updatedAt: FieldValue.serverTimestamp() });
+        notificationBody = `${order.orderNumber} bank transfer proof was rejected and the order was cancelled.`;
+      }
+    }
+  });
+  if (targetUser) await createNotification(targetUser, notificationTitle, notificationBody, 'manual_funding_reviewed', { requestId: input.requestId, status: input.status });
+  return { ok: true };
+});
 
 export const cancelOrder = onCall(callOptions, async (request) => { const { uid } = requireRole(request, ['customer']); const { orderId } = z.object({ orderId: z.string() }).parse(request.data); await db.runTransaction(async (transaction) => { const orderRef = db.doc(`orders/${orderId}`); const order = (await transaction.get(orderRef)).data(); if (!order || order.customerId !== uid) throw new HttpsError('permission-denied', 'Order access denied.'); if (!['pending', 'payment_pending'].includes(order.status)) throw new HttpsError('failed-precondition', 'This order can no longer be cancelled automatically.'); transaction.update(orderRef, { status: 'cancelled', cancelledAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }); transaction.update(db.doc(`suppliers/${order.supplierId}`), { availableLitres: FieldValue.increment(order.quantityLitres), updatedAt: FieldValue.serverTimestamp() }); transaction.update(db.doc(`deliveries/${orderId}`), { status: 'cancelled', updatedAt: FieldValue.serverTimestamp() }); }); return { ok: true }; });
 
