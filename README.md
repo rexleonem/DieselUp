@@ -21,6 +21,7 @@ Requirements: Node 20, npm 10+, JDK 21 for Firebase emulators, an Expo developme
 ```powershell
 npm install
 npm --prefix functions install
+npm --prefix admin install
 Copy-Item .env.example .env
 firebase login
 firebase use --add
@@ -66,6 +67,7 @@ npm --prefix functions run build
 npx expo-doctor
 npm run export:web
 npm run test:rules
+npm --prefix admin run dev
 ```
 
 `test:rules` starts the Firestore emulator and requires JDK 21. The suite checks anonymous denial, account isolation, role-escalation prevention, address ownership, and assigned-driver tracking writes.
