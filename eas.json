@@ -27,6 +27,18 @@
       "distribution": "internal",
       "channel": "development",
       "environment": "development",
+      "env": {
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyA7Tho3-fw4W0wZSfGFgzR8XtJ5We0d6VM",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "dieselup-4f893.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "dieselup-4f893",
+        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "dieselup-4f893.firebasestorage.app",
+        "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "1005180745697",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:1005180745697:web:74e5144f4483b44c1d44a0",
+        "EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID": "G-RCZRWJ9QZV",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "1005180745697-diadppku2de32dfioi9juhnpo6rg8jqb.apps.googleusercontent.com",
+        "GOOGLE_SERVICES_JSON": "./config/firebase/google-services.json",
+        "EXPO_PUBLIC_USE_EMULATORS": "false"
+      },
       "android": {
         "buildType": "apk"
       }
@@ -36,6 +48,18 @@
       "distribution": "internal",
       "channel": "preview",
       "environment": "preview",
+      "env": {
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyA7Tho3-fw4W0wZSfGFgzR8XtJ5We0d6VM",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "dieselup-4f893.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "dieselup-4f893",
+        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "dieselup-4f893.firebasestorage.app",
+        "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "1005180745697",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:1005180745697:web:74e5144f4483b44c1d44a0",
+        "EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID": "G-RCZRWJ9QZV",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "1005180745697-diadppku2de32dfioi9juhnpo6rg8jqb.apps.googleusercontent.com",
+        "GOOGLE_SERVICES_JSON": "./config/firebase/google-services.json",
+        "EXPO_PUBLIC_USE_EMULATORS": "false"
+      },
       "android": {
         "buildType": "apk"
       }
@@ -45,6 +69,18 @@
       "autoIncrement": true,
       "channel": "production",
       "environment": "production",
+      "env": {
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyA7Tho3-fw4W0wZSfGFgzR8XtJ5We0d6VM",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "dieselup-4f893.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "dieselup-4f893",
+        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "dieselup-4f893.firebasestorage.app",
+        "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "1005180745697",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:1005180745697:web:74e5144f4483b44c1d44a0",
+        "EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID": "G-RCZRWJ9QZV",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "1005180745697-diadppku2de32dfioi9juhnpo6rg8jqb.apps.googleusercontent.com",
+        "GOOGLE_SERVICES_JSON": "./config/firebase/google-services.json",
+        "EXPO_PUBLIC_USE_EMULATORS": "false"
+      },
       "android": {
         "buildType": "app-bundle"
       }
