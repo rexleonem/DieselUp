@@ -23,6 +23,8 @@ export default function Suppliers() {
   const [updating, setUpdating] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
+  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
+
   const fetchSuppliers = async () => {
     setLoading(true);
     try {
@@ -55,6 +57,29 @@ export default function Suppliers() {
     } catch (error) {
       console.error("Error updating supplier:", error);
       alert("Failed to update supplier.");
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingSupplier) return;
+    
+    setUpdating(editingSupplier.id);
+    try {
+      await updateDoc(doc(db, 'suppliers', editingSupplier.id), {
+        businessName: editingSupplier.businessName,
+        availableLitres: editingSupplier.availableLitres,
+        pricePerLitre: editingSupplier.pricePerLitre,
+        address: editingSupplier.address,
+        updatedAt: serverTimestamp()
+      });
+      setSuppliers(suppliers.map(s => s.id === editingSupplier.id ? editingSupplier : s));
+      setEditingSupplier(null);
+    } catch (error) {
+      console.error("Error saving supplier:", error);
+      alert("Failed to save changes.");
     } finally {
       setUpdating(null);
     }
@@ -148,7 +173,12 @@ export default function Suppliers() {
                           <option value="approved" style={{color: 'black'}}>Approved</option>
                           <option value="rejected" style={{color: 'black'}}>Rejected</option>
                         </select>
-                        <button className="btn btn-outline" style={{ padding: '6px' }} title="Edit full details">
+                        <button 
+                          className="btn btn-outline" 
+                          style={{ padding: '6px' }} 
+                          title="Edit full details"
+                          onClick={() => setEditingSupplier({ ...supplier })}
+                        >
                           <Edit2 size={16} />
                         </button>
                       </div>
@@ -165,6 +195,59 @@ export default function Suppliers() {
           </div>
         )}
       </div>
+
+      {editingSupplier && (
+        <div className="modal-overlay">
+          <div className="glass-panel modal-content">
+            <h2 style={{ marginBottom: '20px' }}>Edit Supplier</h2>
+            <form onSubmit={handleSaveEdit}>
+              <div className="form-group">
+                <label>Business Name</label>
+                <input 
+                  type="text" 
+                  value={editingSupplier.businessName || ''} 
+                  onChange={e => setEditingSupplier({...editingSupplier, businessName: e.target.value})} 
+                  required 
+                />
+              </div>
+              <div className="form-group">
+                <label>Address</label>
+                <input 
+                  type="text" 
+                  value={editingSupplier.address || ''} 
+                  onChange={e => setEditingSupplier({...editingSupplier, address: e.target.value})} 
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '16px' }}>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label>Available Litres</label>
+                  <input 
+                    type="number" 
+                    value={editingSupplier.availableLitres || 0} 
+                    onChange={e => setEditingSupplier({...editingSupplier, availableLitres: Number(e.target.value)})} 
+                    required 
+                  />
+                </div>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label>Price Per Litre (NGN)</label>
+                  <input 
+                    type="number" 
+                    value={editingSupplier.pricePerLitre || 0} 
+                    onChange={e => setEditingSupplier({...editingSupplier, pricePerLitre: Number(e.target.value)})} 
+                    required 
+                  />
+                </div>
+              </div>
+              <div className="action-row">
+                <button type="button" className="btn btn-outline" onClick={() => setEditingSupplier(null)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={updating === editingSupplier.id}>
+                  {updating === editingSupplier.id ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

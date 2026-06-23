@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { collection, query, orderBy, limit, getDocs, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { Search, Filter, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Search, Filter, CheckCircle, XCircle, Clock, Eye } from 'lucide-react';
 
 interface Order {
   id: string;
@@ -20,6 +20,8 @@ export default function Orders() {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
+
+  const [viewingOrder, setViewingOrder] = useState<Order | null>(null);
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -150,6 +152,14 @@ export default function Orders() {
                           <option value="cancelled" style={{color: 'black'}}>Cancelled</option>
                           <option value="refunded" style={{color: 'black'}}>Refunded</option>
                         </select>
+                        <button 
+                          className="btn btn-outline" 
+                          style={{ padding: '6px' }} 
+                          title="View details"
+                          onClick={() => setViewingOrder(order)}
+                        >
+                          <Eye size={16} />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -164,6 +174,37 @@ export default function Orders() {
           </div>
         )}
       </div>
+
+      {viewingOrder && (
+        <div className="modal-overlay">
+          <div className="glass-panel modal-content">
+            <h2 style={{ marginBottom: '20px' }}>Order Details: {viewingOrder.orderNumber || viewingOrder.id}</h2>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+              <div>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>Customer ID</p>
+                <p style={{ fontWeight: 500 }}>{viewingOrder.customerId}</p>
+              </div>
+              <div>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>Supplier ID</p>
+                <p style={{ fontWeight: 500 }}>{viewingOrder.supplierId || 'Not assigned'}</p>
+              </div>
+              <div>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>Quantity</p>
+                <p style={{ fontWeight: 500 }}>{viewingOrder.quantityLitres?.toLocaleString() || 0} Litres</p>
+              </div>
+              <div>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>Total Amount</p>
+                <p style={{ fontWeight: 500 }}>{formatNaira(viewingOrder.money?.total || 0)}</p>
+              </div>
+            </div>
+
+            <div className="action-row">
+              <button className="btn btn-outline" onClick={() => setViewingOrder(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
