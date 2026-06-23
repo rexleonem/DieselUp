@@ -28,7 +28,8 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read: if signedIn() && (userId == uid() || isAdmin());
+      allow read: if signedIn() &&  == uid();
+      allow read: if isAdmin();
       allow create: if validNewUser(userId);
       allow delete: if false;
       allow update: if signedIn() && userId == uid() && onlyChanges(['displayName', 'photoURL', 'updatedAt']);
@@ -37,7 +38,8 @@ service cloud.firestore {
       }
     }
     match /customers/{customerId} {
-      allow read: if signedIn() && (customerId == uid() || isAdmin());
+      allow read: if signedIn() &&  == uid();
+      allow read: if isAdmin();
       allow create: if signedIn() && customerId == uid()
         && request.resource.data.keys().hasOnly(['userId', 'createdAt', 'updatedAt'])
         && request.resource.data.userId == uid()
@@ -72,7 +74,9 @@ service cloud.firestore {
       }
     }
     match /drivers/{driverId} {
-      allow read: if signedIn() && (driverId == uid() || isAdmin() || (isSupplier() && resource.data.supplierId == supplierId()));
+      allow read: if signedIn() && driverId == uid();
+      allow read: if isAdmin();
+      allow read: if isSupplier() && resource.data.supplierId == supplierId();
       allow create: if signedIn() && driverId == uid()
         && request.resource.data.keys().hasOnly(['userId', 'displayName', 'email', 'phoneNumber', 'status', 'online', 'completedDeliveries', 'rating', 'createdAt', 'updatedAt'])
         && request.resource.data.userId == uid() && request.resource.data.displayName is string
@@ -111,17 +115,28 @@ service cloud.firestore {
       allow update: if isDriver() && order(orderId).driverId == uid() && onlyChanges(['proofUrl', 'proofUploadedAt']);
     }
     match /wallets/{userId} {
-      allow read: if signedIn() && (userId == uid() || isAdmin());
+      allow read: if signedIn() && userId == uid();
+      allow read: if isAdmin();
       allow write: if false;
-      match /transactions/{transactionId} { allow read: if signedIn() && (userId == uid() || isAdmin()); allow write: if false; }
+      match /transactions/{transactionId} { 
+        allow read: if signedIn() && userId == uid();
+        allow read: if isAdmin(); 
+        allow write: if false; 
+      }
     }
     match /inventory/{tankId} {
-      allow read: if signedIn() && (isAdmin() || (isSupplier() && resource.data.supplierId == supplierId()));
+      allow read: if isAdmin();
+      allow read: if isSupplier() && resource.data.supplierId == supplierId();
       allow write: if false;
-      match /history/{historyId} { allow read: if signedIn() && (isAdmin() || (isSupplier() && get(/databases/$(database)/documents/inventory/$(tankId)).data.supplierId == supplierId())); allow write: if false; }
+      match /history/{historyId} { 
+        allow read: if isAdmin(); 
+        allow read: if isSupplier() && get(/databases/$(database)/documents/inventory/$(tankId)).data.supplierId == supplierId(); 
+        allow write: if false; 
+      }
     }
     match /notifications/{notificationId} {
       allow read: if signedIn() && resource.data.userId == uid();
+      allow read: if isAdmin();
       allow update: if signedIn() && resource.data.userId == uid() && onlyChanges(['readAt']);
       allow create, delete: if false;
     }
@@ -147,7 +162,8 @@ service cloud.firestore {
       }
     }
     match /support_tickets/{ticketId} {
-      allow read: if signedIn() && (resource.data.customerId == uid() || isAdmin());
+      allow read: if signedIn() &&  == uid();
+      allow read: if isAdmin();
       allow create: if signedIn() && request.resource.data.customerId == uid();
       allow update: if isAdmin(); allow delete: if false;
     }
