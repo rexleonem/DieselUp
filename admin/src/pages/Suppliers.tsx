@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { collection, query, limit, getDocs, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Search, MapPin, CheckCircle, XCircle, AlertCircle, Edit2 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 interface Supplier {
   id: string;
@@ -16,6 +17,7 @@ interface Supplier {
 }
 
 export default function Suppliers() {
+  const { profile } = useAuth();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
@@ -137,8 +139,9 @@ export default function Suppliers() {
                         <select 
                           value={supplier.approvalStatus}
                           onChange={(e) => handleUpdateStatus(supplier.id, e.target.value)}
-                          disabled={updating === supplier.id}
-                          style={{ padding: '6px', borderRadius: '6px', background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid var(--border-color)', cursor: 'pointer' }}
+                          disabled={updating === supplier.id || profile?.role !== 'super_admin'}
+                          title={profile?.role !== 'super_admin' ? "Only Super Admins can change approval status" : "Change status"}
+                          style={{ padding: '6px', borderRadius: '6px', background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid var(--border-color)', cursor: profile?.role !== 'super_admin' ? 'not-allowed' : 'pointer', opacity: profile?.role !== 'super_admin' ? 0.6 : 1 }}
                         >
                           <option value="pending" style={{color: 'black'}}>Pending</option>
                           <option value="under_review" style={{color: 'black'}}>Under Review</option>

@@ -15,8 +15,11 @@ function Sidebar() {
     { path: '/', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
     { path: '/orders', label: 'Orders', icon: <ShoppingCart size={20} /> },
     { path: '/suppliers', label: 'Suppliers', icon: <Users size={20} /> },
-    { path: '/settings', label: 'Settings', icon: <SettingsIcon size={20} /> },
   ];
+
+  if (profile?.role === 'super_admin') {
+    navItems.push({ path: '/settings', label: 'Settings', icon: <SettingsIcon size={20} /> });
+  }
 
   return (
     <div className="sidebar">
@@ -38,6 +41,9 @@ function Sidebar() {
       <div style={{ marginTop: 'auto' }}>
         <div style={{ padding: '0 16px', marginBottom: '16px', fontSize: '14px', color: 'var(--text-secondary)' }}>
           Logged in as <strong>{profile?.displayName || 'Admin'}</strong>
+          <div style={{ fontSize: '12px', marginTop: '4px', opacity: 0.8 }}>
+            Role: {profile?.role === 'super_admin' ? 'Super Admin' : 'Admin'}
+          </div>
         </div>
         <button className="nav-item" onClick={logout} style={{ width: '100%', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
           <LogOut size={20} />
@@ -52,6 +58,13 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   if (loading) return <div className="login-container">Loading...</div>;
   if (!user) return <Navigate to="/login" replace />;
+  return <>{children}</>;
+}
+
+function SuperAdminRoute({ children }: { children: React.ReactNode }) {
+  const { user, profile, loading } = useAuth();
+  if (loading) return <div className="login-container">Loading...</div>;
+  if (!user || profile?.role !== 'super_admin') return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 
@@ -76,7 +89,7 @@ function App() {
           <Route path="/" element={<ProtectedRoute><AdminLayout><Dashboard /></AdminLayout></ProtectedRoute>} />
           <Route path="/orders" element={<ProtectedRoute><AdminLayout><Orders /></AdminLayout></ProtectedRoute>} />
           <Route path="/suppliers" element={<ProtectedRoute><AdminLayout><Suppliers /></AdminLayout></ProtectedRoute>} />
-          <Route path="/settings" element={<ProtectedRoute><AdminLayout><Settings /></AdminLayout></ProtectedRoute>} />
+          <Route path="/settings" element={<SuperAdminRoute><AdminLayout><Settings /></AdminLayout></SuperAdminRoute>} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
