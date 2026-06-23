@@ -2,7 +2,40 @@ import { useMemo, useState } from 'react'; import { Pressable, StyleSheet, View 
 import { Screen } from '@/components/ui/Screen'; import { Text } from '@/components/ui/Text'; import { Input } from '@/components/ui/Input'; import { Button } from '@/components/ui/Button'; import { Card } from '@/components/ui/Card'; import { LoadingState } from '@/components/ui/StateView'; import { OrderHeader } from '@/features/order/OrderHeader'; import { LocationMap } from '@/components/maps/LocationMap';
 import { useAppStore } from '@/store/app'; import { useAuth } from '@/providers/AuthProvider'; import { useRealtimeQuery } from '@/hooks/useRealtimeQuery'; import { db } from '@/lib/firebase'; import { getAddressDetails, searchAddresses } from '@/services/functions'; import { colors, spacing } from '@/theme/tokens'; import type { Address } from '@/types/domain';
 export default function LocationStep() { const params = useLocalSearchParams<{ emergency?: string; scheduled?: string }>(); const { firebaseUser } = useAuth(); const patch = useAppStore((state) => state.patchOrderDraft); const draft = useAppStore((state) => state.orderDraft); const [selected, setSelected] = useState<Address | undefined>(draft.address); const [search, setSearch] = useState(''); const [suggestions, setSuggestions] = useState<{ placeId: string; description: string }[]>([]); const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const savedQuery = useMemo(() => firebaseUser ? query(collection(db, 'customers', firebaseUser.uid, 'addresses'), orderBy('updatedAt', 'desc'), limit(10)) : null, [firebaseUser]); const saved = useRealtimeQuery<Address>(savedQuery);
-const useCurrentLocation = async () => { try { setBusy(true); setError(''); const permission = await Location.requestForegroundPermissionsAsync(); if (!permission.granted) throw new Error('Location permission is required to use your current location.'); const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High }); const point = { latitude: position.coords.latitude, longitude: position.coords.longitude }; const geocoded = await Location.reverseGeocodeAsync(point); const item = geocoded[0]; const formattedAddress = item ? [item.name, item.street, item.city, item.region].filter(Boolean).join(', ') : `${point.latitude.toFixed(5)}, ${point.longitude.toFixed(5)}`; setSelected({ label: 'Current location', formattedAddress, location: point }); await Haptics.selectionAsync(); } catch (reason) { setError(reason instanceof Error ? reason.message : 'Unable to get current location.'); } finally { setBusy(false); } };
+const useCurrentLocation = async () => { 
+  try { 
+    setBusy(true); 
+    setError(''); 
+    const permission = await Location.requestForegroundPermissionsAsync(); 
+    if (!permission.granted) throw new Error('Location permission is required to use your current location.'); 
+    const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High }); 
+    const point = { latitude: position.coords.latitude, longitude: position.coords.longitude }; 
+    let formattedAddress = `${point.latitude.toFixed(5)}, ${point.longitude.toFixed(5)}`;
+    
+    try {
+      const geocoded = await Location.reverseGeocodeAsync(point); 
+      const item = geocoded[0]; 
+      if (item && item.city) {
+        formattedAddress = [item.name, item.street, item.city, item.region].filter(Boolean).join(', ');
+      } else {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${point.latitude}&lon=${point.longitude}`);
+        if (res.ok) {
+          const data = await res.json();
+          formattedAddress = data.address?.city || data.address?.town || data.address?.village || data.address?.state || data.display_name || formattedAddress;
+        }
+      }
+    } catch (e) {
+      console.warn('Reverse geocoding failed', e);
+    }
+    
+    setSelected({ label: 'Current location', formattedAddress, location: point }); 
+    await Haptics.selectionAsync(); 
+  } catch (reason) { 
+    setError(reason instanceof Error ? reason.message : 'Unable to get current location.'); 
+  } finally { 
+    setBusy(false); 
+  } 
+};
 const find = async (value: string) => { setSearch(value); if (value.trim().length < 3) { setSuggestions([]); return; } try { setSuggestions(await searchAddresses(value.trim())); } catch { setError('Address search is temporarily unavailable.'); } };
 const chooseSuggestion = async (item: { placeId: string; description: string }) => { try { setBusy(true); const details = await getAddressDetails(item.placeId); setSelected({ label: 'Delivery location', formattedAddress: details.formattedAddress, location: details.location, placeId: item.placeId }); setSuggestions([]); setSearch(''); } catch { setError('Unable to validate that address.'); } finally { setBusy(false); } };
 const next = () => { if (!selected) return; patch({ address: selected, isEmergency: params.emergency === 'true' }); router.push('/order/quantity'); };

@@ -44,15 +44,10 @@ async function seedUser(user) {
   await updateProfile(userRecord, { displayName: user.displayName });
   
   const uid = userRecord.uid;
-  const userDoc = await getDoc(doc(db, 'users', uid));
-  if (userDoc.exists()) {
-    console.log(`Profile already exists: ${user.email}`);
-    return;
-  }
 
   const supplierId = user.role === 'supplier' ? `supplier-${uid.slice(0, 10)}` : null;
   
-  await setDoc(doc(db, 'users', uid), {
+  await setDoc(doc(db, 'profiles', uid), {
     email: user.email,
     phoneNumber: user.phoneNumber,
     displayName: user.displayName,
@@ -62,26 +57,32 @@ async function seedUser(user) {
     ...(supplierId ? { supplierId } : {}),
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
-  });
+  }, { merge: true });
 
   if (user.role === 'customer') {
     await setDoc(doc(db, 'customers', uid), {
       userId: uid,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
-    });
+    }, { merge: true });
   } else if (user.role === 'supplier') {
     await setDoc(doc(db, 'suppliers', supplierId), {
       ownerId: uid,
       businessName: user.displayName,
-      approvalStatus: 'pending',
-      rating: 0,
-      ratingCount: 0,
-      availableLitres: 0,
-      isOpen: false,
+      approvalStatus: 'approved',
+      rating: 4.8,
+      ratingCount: 12,
+      availableLitres: 100000,
+      pricePerLitre: 1250,
+      deliveryFee: 5000,
+      serviceRadiusKm: 50,
+      isOpen: true,
+      location: { latitude: 6.5244, longitude: 3.3792 },
+      address: 'Lagos, Nigeria',
+      estimatedDeliveryMinutes: 45,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
-    });
+    }, { merge: true });
   } else if (user.role === 'driver') {
     await setDoc(doc(db, 'drivers', uid), {
       userId: uid,
@@ -94,7 +95,7 @@ async function seedUser(user) {
       rating: 0,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
-    });
+    }, { merge: true });
   }
 
   console.log(`Seeded ${user.role}: ${user.email}`);
