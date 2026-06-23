@@ -29,14 +29,22 @@ async function createDemoCustomer() {
     console.log(`Created Demo Customer: demo.customer@dieselup.ng`);
 }
 
-async function createDemoSupplier() {
+async function createMarketRate() {
+    await db.doc('settings/market').set({
+        currentPricePerLitre: 1250,
+        previousPricePerLitre: 1200,
+        updatedAt: FieldValue.serverTimestamp()
+    });
+    console.log(`Created Market Rate`);
+}
+
+async function createDemoSupplier(email, displayName, supplierId, price) {
     let user;
     try {
-        user = await auth.getUserByEmail('demo.supplier@dieselup.ng');
+        user = await auth.getUserByEmail(email);
     } catch {
-        user = await auth.createUser({ email: 'demo.supplier@dieselup.ng', password: 'password123', displayName: 'Demo Supplier', emailVerified: true });
+        user = await auth.createUser({ email, password: 'password123', displayName, emailVerified: true });
     }
-    const supplierId = 'demo-supplier-123';
     await auth.setCustomUserClaims(user.uid, { role: 'supplier', status: 'active', supplierId });
     await db.doc(`users/${user.uid}`).set({
         email: user.email,
@@ -48,9 +56,9 @@ async function createDemoSupplier() {
     }, { merge: true });
 
     await db.doc(`suppliers/${supplierId}`).set({
-        businessName: 'Demo Energy Corp',
+        businessName: displayName,
         approvalStatus: 'approved',
-        pricePerLitre: 1050,
+        pricePerLitre: price,
         deliveryFee: 15000,
         serviceRadiusKm: 50,
         estimatedDeliveryMinutes: 45,
@@ -59,7 +67,7 @@ async function createDemoSupplier() {
         address: 'Lagos, Nigeria',
         updatedAt: FieldValue.serverTimestamp()
     }, { merge: true });
-    console.log(`Created Demo Supplier: demo.supplier@dieselup.ng`);
+    console.log(`Created Demo Supplier: ${email}`);
 
     // Create Demo Products / Inventory
     await db.collection(`suppliers/${supplierId}/tanks`).doc('tank-1').set({
@@ -69,13 +77,19 @@ async function createDemoSupplier() {
         lowStockThreshold: 10000,
         updatedAt: FieldValue.serverTimestamp()
     });
-    console.log(`Created Demo Products (Inventory Tank) for Supplier`);
 }
 
 async function run() {
     console.log('Seeding demo data...');
     await createDemoCustomer();
-    await createDemoSupplier();
+    await createDemoSupplier('demo.supplier@dieselup.ng', 'Oando PLC', 'supplier-oando', 1250);
+    await createDemoSupplier('total.energies@dieselup.ng', 'TotalEnergies Nigeria', 'supplier-total', 1270);
+    await createDemoSupplier('conoil.supplier@dieselup.ng', 'Conoil Plc', 'supplier-conoil', 1240);
+    await createDemoSupplier('ardova.plc@dieselup.ng', 'Ardova Plc', 'supplier-ardova', 1260);
+    await createDemoSupplier('nnpc.retail@dieselup.ng', 'NNPC Retail', 'supplier-nnpc', 1200);
+    await createDemoSupplier('forte.oil@dieselup.ng', 'Forte Oil', 'supplier-forte', 1255);
+    await createDemoSupplier('rainoil.ltd@dieselup.ng', 'Rainoil Limited', 'supplier-rainoil', 1245);
+    await createMarketRate();
     console.log('Done!');
 }
 

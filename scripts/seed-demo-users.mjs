@@ -13,8 +13,14 @@ if (!password || password.length < 12) {
 
 const users = [
   { email: 'demo.customer@dieselup.ng', displayName: 'DieselUp Demo Customer', role: 'customer', phoneNumber: '+2348000000101' },
-  { email: 'demo.supplier@dieselup.ng', displayName: 'DieselUp Demo Supplier', role: 'supplier', phoneNumber: '+2348000000102' },
-  { email: 'demo.driver@dieselup.ng', displayName: 'DieselUp Demo Driver', role: 'driver', phoneNumber: '+2348000000103' }
+  { email: 'demo.supplier@dieselup.ng', displayName: 'Oando PLC', role: 'supplier', phoneNumber: '+2348000000102' },
+  { email: 'demo.driver@dieselup.ng', displayName: 'DieselUp Demo Driver', role: 'driver', phoneNumber: '+2348000000103' },
+  { email: 'total.energies@dieselup.ng', displayName: 'TotalEnergies Nigeria', role: 'supplier', phoneNumber: '+2348000000104' },
+  { email: 'conoil.supplier@dieselup.ng', displayName: 'Conoil Plc', role: 'supplier', phoneNumber: '+2348000000105' },
+  { email: 'ardova.plc@dieselup.ng', displayName: 'Ardova Plc', role: 'supplier', phoneNumber: '+2348000000106' },
+  { email: 'nnpc.retail@dieselup.ng', displayName: 'NNPC Retail', role: 'supplier', phoneNumber: '+2348000000107' },
+  { email: 'forte.oil@dieselup.ng', displayName: 'Forte Oil', role: 'supplier', phoneNumber: '+2348000000108' },
+  { email: 'rainoil.ltd@dieselup.ng', displayName: 'Rainoil Limited', role: 'supplier', phoneNumber: '+2348000000109' }
 ];
 
 async function identityRequest(method, data) {

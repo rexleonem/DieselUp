@@ -31,3 +31,4 @@ export interface Delivery { id: string; orderId: string; supplierId: string; dri
 export interface Notification { id: string; userId: string; title: string; body: string; event: string; readAt?: Timestamp; data?: Record<string, string>; createdAt: Timestamp }
 export interface Conversation { id: string; participantIds: string[]; orderId?: string; lastMessage?: string; lastMessageAt?: Timestamp; unreadCounts: Record<string, number> }
 export interface Message { id: string; senderId: string; text?: string; attachmentUrl?: string; readBy: string[]; createdAt: Timestamp }
+export interface SupportTicket { id: string; customerId: string; subject: string; description: string; status: 'open' | 'in_progress' | 'resolved'; priority: 'low' | 'medium' | 'high' | 'urgent'; createdAt: Timestamp; updatedAt: Timestamp }
