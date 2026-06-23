@@ -18,7 +18,7 @@
         "EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID": "G-RCZRWJ9QZV",
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "1005180745697-diadppku2de32dfioi9juhnpo6rg8jqb.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "171702674846-3a643iqngn3kqojl9dae6s21ca6bkpu2.apps.googleusercontent.com",
-        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "",
+        // "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "",
         "GOOGLE_SERVICES_JSON": "./config/firebase/google-services.json",
         "EXPO_PUBLIC_USE_EMULATORS": "false"
       }
@@ -39,7 +39,6 @@
         "EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID": "G-RCZRWJ9QZV",
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "1005180745697-diadppku2de32dfioi9juhnpo6rg8jqb.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "171702674846-3a643iqngn3kqojl9dae6s21ca6bkpu2.apps.googleusercontent.com",
-        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "",
         "GOOGLE_SERVICES_JSON": "./config/firebase/google-services.json",
         "EXPO_PUBLIC_USE_EMULATORS": "false"
       },
@@ -62,7 +61,6 @@
         "EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID": "G-RCZRWJ9QZV",
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "1005180745697-diadppku2de32dfioi9juhnpo6rg8jqb.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "171702674846-3a643iqngn3kqojl9dae6s21ca6bkpu2.apps.googleusercontent.com",
-        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "",
         "GOOGLE_SERVICES_JSON": "./config/firebase/google-services.json",
         "EXPO_PUBLIC_USE_EMULATORS": "false"
       },
@@ -85,7 +83,6 @@
         "EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID": "G-RCZRWJ9QZV",
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "1005180745697-diadppku2de32dfioi9juhnpo6rg8jqb.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "171702674846-3a643iqngn3kqojl9dae6s21ca6bkpu2.apps.googleusercontent.com",
-        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "",
         "GOOGLE_SERVICES_JSON": "./config/firebase/google-services.json",
         "EXPO_PUBLIC_USE_EMULATORS": "false"
       },
