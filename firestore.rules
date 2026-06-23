@@ -3,12 +3,11 @@ service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
     function uid() { return request.auth.uid; }
-    function profile() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
-    function role() { return signedIn() ? request.auth.token.get('role', profile().get('role', '')) : ''; }
+    function role() { return signedIn() ? request.auth.token.get('role', exists(/databases/$(database)/documents/users/$(request.auth.uid)) ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', '') : '') : ''; }
     function isAdmin() { return signedIn() && role() in ['admin', 'super_admin']; }
     function isSupplier() { return signedIn() && role() == 'supplier'; }
     function isDriver() { return signedIn() && role() == 'driver'; }
-    function supplierId() { return signedIn() ? request.auth.token.get('supplierId', profile().get('supplierId', '')) : ''; }
+    function supplierId() { return signedIn() ? request.auth.token.get('supplierId', exists(/databases/$(database)/documents/users/$(request.auth.uid)) ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('supplierId', '') : '') : ''; }
     function order(orderId) { return get(/databases/$(database)/documents/orders/$(orderId)).data; }
     function canReadOrder(data) { return signedIn() && (isAdmin() || data.customerId == uid() || data.driverId == uid() || (isSupplier() && data.supplierId == supplierId())); }
     function conversation(conversationId) { return get(/databases/$(database)/documents/conversations/$(conversationId)).data; }
