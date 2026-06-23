@@ -4,12 +4,14 @@ import { db } from '../lib/firebase';
 import { Settings as SettingsIcon, Save } from 'lucide-react';
 
 interface MarketSettings {
-  dieselPricePerLitre: number;
+  currentPricePerLitre: number;
+  previousPricePerLitre: number;
   systemFeePercent: number;
 }
 
 export default function Settings() {
-  const [settings, setSettings] = useState<MarketSettings>({ dieselPricePerLitre: 1200, systemFeePercent: 2.5 });
+  const [settings, setSettings] = useState<MarketSettings>({ currentPricePerLitre: 1200, previousPricePerLitre: 1200, systemFeePercent: 2.5 });
+  const [originalPrice, setOriginalPrice] = useState<number>(1200);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -19,7 +21,16 @@ export default function Settings() {
       try {
         const docSnap = await getDoc(doc(db, 'settings', 'market'));
         if (docSnap.exists()) {
-          setSettings(docSnap.data() as MarketSettings);
+          const data = docSnap.data();
+          const current = data.currentPricePerLitre ?? data.dieselPricePerLitre ?? 1200;
+          const previous = data.previousPricePerLitre ?? 1200;
+          const fee = data.systemFeePercent ?? 2.5;
+          setSettings({
+            currentPricePerLitre: current,
+            previousPricePerLitre: previous,
+            systemFeePercent: fee
+          });
+          setOriginalPrice(current);
         }
       } catch (error) {
         console.error("Error fetching settings:", error);
@@ -36,10 +47,17 @@ export default function Settings() {
     setMessage('');
     
     try {
+      const prevPrice = settings.currentPricePerLitre !== originalPrice ? originalPrice : settings.previousPricePerLitre;
+      
       await setDoc(doc(db, 'settings', 'market'), {
-        ...settings,
+        currentPricePerLitre: settings.currentPricePerLitre,
+        previousPricePerLitre: prevPrice,
+        systemFeePercent: settings.systemFeePercent,
         updatedAt: serverTimestamp()
       }, { merge: true });
+      
+      setOriginalPrice(settings.currentPricePerLitre);
+      setSettings(prev => ({ ...prev, previousPricePerLitre: prevPrice }));
       setMessage('Settings saved successfully!');
       setTimeout(() => setMessage(''), 3000);
     } catch (error) {
@@ -75,8 +93,8 @@ export default function Settings() {
             <label>Diesel Market Price (NGN / Litre)</label>
             <input 
               type="number" 
-              value={settings.dieselPricePerLitre}
-              onChange={(e) => setSettings({ ...settings, dieselPricePerLitre: Number(e.target.value) })}
+              value={settings.currentPricePerLitre}
+              onChange={(e) => setSettings({ ...settings, currentPricePerLitre: Number(e.target.value) })}
               required
               min="0"
               step="0.01"
