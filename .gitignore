@@ -4,7 +4,6 @@ node_modules/
 /ios/
 dist/
 web-build/
-.env
 .env.*.local
 google-services.json
 !config/firebase/google-services.json
@@ -20,3 +19,4 @@ firebase-debug.log
 
 expo-env.d.ts
 # @end expo-cli
+config.bat
