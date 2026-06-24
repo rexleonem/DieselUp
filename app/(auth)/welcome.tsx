@@ -10,18 +10,20 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { colors, radii, spacing } from '@/theme/tokens';
 
-const slides = [
+type Slide = { id: string; title: string; desc: string; icon: keyof typeof Ionicons.glyphMap };
+
+const slides: Slide[] = [
   { id: '1', title: 'Verified supply network', desc: 'Order from vetted suppliers guaranteeing quality and exact quantity on every single drop.', icon: 'shield-checkmark' },
   { id: '2', title: 'Live delivery tracking', desc: 'Follow every litre from depot to destination with real-time GPS tracking and alerts.', icon: 'navigate' },
   { id: '3', title: 'Secure payments', desc: 'Enterprise-grade secure payments, wallet top-ups, and instant automated invoicing.', icon: 'card' }
-] as const;
+];
 
 export default function WelcomeScreen() {
   const { width } = useWindowDimensions(); 
   const wide = width >= 900;
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollX = useRef(new Animated.Value(0)).current;
-  const flatListRef = useRef<FlatList>(null);
+  const flatListRef = useRef<FlatList<Slide>>(null);
 
   const viewConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
   const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
@@ -31,10 +33,10 @@ export default function WelcomeScreen() {
   // The width of each slide
   const slideWidth = wide ? Math.min(width * 0.4, 580) : width - spacing.xl * 2;
 
-  const renderItem = ({ item }: { item: typeof slides[0] }) => (
+  const renderItem = ({ item }: { item: Slide }) => (
     <View style={[styles.slide, { width: slideWidth }]}>
       <View style={styles.slideIconContainer}>
-        <Ionicons name={item.icon as any} size={32} color={colors.primary} />
+        <Ionicons name={item.icon} size={32} color={colors.primary} />
       </View>
       <Text variant="h1" style={styles.slideTitle}>{item.title}</Text>
       <Text color="#64748B" style={styles.slideDesc}>{item.desc}</Text>
